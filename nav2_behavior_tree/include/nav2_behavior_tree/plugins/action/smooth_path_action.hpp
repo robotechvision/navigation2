@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__smooth_path_ACTION_HPP_
-#define NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__smooth_path_ACTION_HPP_
+#ifndef NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__SMOOTH_PATH_ACTION_HPP_
+#define NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__SMOOTH_PATH_ACTION_HPP_
 
 #include <string>
 
@@ -61,9 +61,11 @@ public:
     return providedBasicPorts(
       {
         BT::OutputPort<nav_msgs::msg::Path>("path_out", "Path smoothed by SmootherServer node"),
+        BT::OutputPort<double>("smoothing_duration", "Time taken to smooth path"),
+        BT::OutputPort<bool>(
+          "was_completed", "True if smoothing was not interrupted by time limit"),
         BT::InputPort<nav_msgs::msg::Path>("path_in", "Path to be smoothed"),
-        BT::InputPort<geometry_msgs::msg::PoseStamped>(
-          "start", "Start pose of the path if overriding current robot pose"),
+        BT::InputPort<double>("max_smoothing_duration", 1.0, "Maximum smoothing duration"),
         BT::InputPort<std::string>("smoother_id", ""),
       });
   }
@@ -71,4 +73,4 @@ public:
 
 }  // namespace nav2_behavior_tree
 
-#endif  // NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__smooth_path_ACTION_HPP_
+#endif  // NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__SMOOTH_PATH_ACTION_HPP_

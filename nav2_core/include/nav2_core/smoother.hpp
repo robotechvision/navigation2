@@ -19,6 +19,7 @@
 #include <string>
 
 #include "nav2_costmap_2d/costmap_subscriber.hpp"
+#include "nav2_costmap_2d/footprint_subscriber.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 #include "rclcpp/rclcpp.hpp"
@@ -48,7 +49,8 @@ public:
   virtual void configure(
     const rclcpp_lifecycle::LifecycleNode::WeakPtr &,
     std::string name, const std::shared_ptr<tf2_ros::Buffer> &,
-    const std::shared_ptr<nav2_costmap_2d::CostmapSubscriber> &) = 0;
+    const std::shared_ptr<nav2_costmap_2d::CostmapSubscriber> &,
+    const std::shared_ptr<nav2_costmap_2d::FootprintSubscriber> &) = 0;
 
   /**
    * @brief Method to cleanup resources.
@@ -66,15 +68,17 @@ public:
   virtual void deactivate() = 0;
 
   /**
-   * @brief Smoother smoothPath - smooths/optimizes given path section
+   * @brief Method to smooth given path
    *
-   * @param path Path section to be optimized
-   * @return Optimized path
+   * @param path In-out path to be smoothed
+   * @param max_time Maximum duration smoothing should take
+   * @return If smoothing was completed (true) or interrupted by time limit (false)
    */
-  virtual nav_msgs::msg::Path smoothPath(
-    const nav_msgs::msg::Path & path) = 0;
+  virtual bool smooth(
+    nav_msgs::msg::Path & path,
+    const rclcpp::Duration & max_time) = 0;
 };
 
-}  // namespace nav2_smoother
+}  // namespace nav2_core
 
 #endif  // NAV2_SMOOTHER__SMOOTHER_HPP_
