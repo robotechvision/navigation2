@@ -29,12 +29,14 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <fstream>
 
 #include "nav2_smac_planner/a_star.hpp"
 using namespace std::chrono;  // NOLINT
 
 namespace nav2_smac_planner
 {
+
 
 template<typename NodeT>
 AStarAlgorithm<NodeT>::AStarAlgorithm(
@@ -170,7 +172,7 @@ void AStarAlgorithm<NodeT>::setGoal(
     static_cast<float>(my),
     static_cast<float>(dim_3));
 
-  if (!_search_info.cache_obstacle_heuristic || goal_coords != _goal_coordinates) {
+  if (_search_info.obstacle_heuristic_admissible || !_search_info.cache_obstacle_heuristic || goal_coords != _goal_coordinates) {
     NodeT::resetObstacleHeuristic(_costmap, mx, my);
   }
 
@@ -205,6 +207,8 @@ bool AStarAlgorithm<NodeT>::areInputsValid()
 
   return true;
 }
+
+int analytic_exp_start = 0;
 
 template<typename NodeT>
 bool AStarAlgorithm<NodeT>::createPath(
@@ -341,7 +345,23 @@ bool AStarAlgorithm<NodeT>::backtracePath(NodePtr node, CoordinateVector & path)
 
   NodePtr current_node = node;
 
+  // float analytic_start_cost = 0.0;
+  // RCLCPP_INFO(rclcpp::get_logger("planner_server"), "Analytic exp size: %d", analytic_exp_start);
   while (current_node->parent) {
+    // if (analytic_exp_start == 0) {
+    //   float acc_cost = current_node->getAccumulatedCost();
+    //   float heur_cost = NodeT::getHeuristicCost(current_node->pose, _goal_coordinates, _costmap);
+    //   RCLCPP_INFO(rclcpp::get_logger("planner_server"), "Analytic exp start: (%f, %f), acc cost: %f, heur: %f",
+    //     current_node->pose.x, current_node->pose.y, acc_cost, heur_cost);
+    //   analytic_start_cost = acc_cost + heur_cost;
+    // }
+    // if (analytic_exp_start <= 0) {
+    //   float acc_cost = current_node->getAccumulatedCost();
+    //   float heur_cost = NodeT::getHeuristicCost(current_node->pose, _goal_coordinates, _costmap);
+    //   RCLCPP_INFO(rclcpp::get_logger("planner_server"), "Node: (%f, %f), acc cost: %f, goal cost: %f, heur: %f",
+    //     current_node->pose.x, current_node->pose.y, acc_cost, analytic_start_cost - acc_cost, heur_cost);
+    // }
+    // analytic_exp_start--;
     path.push_back(current_node->pose);
     current_node = current_node->parent;
   }
@@ -524,6 +544,7 @@ typename AStarAlgorithm<NodeT>::NodePtr AStarAlgorithm<NodeT>::tryAnalyticExpans
             break;
           }
         }
+        analytic_exp_start = (int)analytic_nodes.size()+1;
 
         return setAnalyticPath(node, analytic_nodes);
       }
@@ -543,6 +564,19 @@ typename AStarAlgorithm<NodeT>::AnalyticExpansionNodes AStarAlgorithm<NodeT>::ge
 {
   static ompl::base::ScopedState<> from(node->motion_table.state_space), to(
     node->motion_table.state_space), s(node->motion_table.state_space);
+  
+  float delta_theta = _goal_coordinates.theta - node->pose.theta;
+  if (delta_theta < -node->motion_table.num_angle_quantization_float/2)
+    delta_theta += node->motion_table.num_angle_quantization_float;
+  else if (delta_theta > node->motion_table.num_angle_quantization_float/2)
+    delta_theta -= node->motion_table.num_angle_quantization_float;
+  if (std::abs(delta_theta) > node->motion_table.max_analytic_expansion_angle_range) {
+    return AnalyticExpansionNodes();
+  }
+  float min_angle, max_angle, current_angle = min_angle = max_angle = node->pose.theta;
+  // Assuming the first node has already been validated
+  float min_cell_cost, max_cell_cost = min_cell_cost = node->getCost() / 252.0;
+
   from[0] = node->pose.x;
   from[1] = node->pose.y;
   from[2] = node->pose.theta * node->motion_table.bin_size;
@@ -551,6 +585,9 @@ typename AStarAlgorithm<NodeT>::AnalyticExpansionNodes AStarAlgorithm<NodeT>::ge
   to[2] = _goal_coordinates.theta * node->motion_table.bin_size;
 
   float d = node->motion_table.state_space->distance(from(), to());
+  if (d * _costmap->getResolution() > node->motion_table.max_analytic_expansion_length) {
+    return AnalyticExpansionNodes();
+  }
 
   // A move of sqrt(2) is guaranteed to be in a new cell
   static const float sqrt_2 = std::sqrt(2.);
@@ -581,6 +618,21 @@ typename AStarAlgorithm<NodeT>::AnalyticExpansionNodes AStarAlgorithm<NodeT>::ge
     while (angle >= node->motion_table.num_angle_quantization_float) {
       angle -= node->motion_table.num_angle_quantization_float;
     }
+
+    float delta_angle = angle - current_angle;
+    while (delta_angle >= node->motion_table.num_angle_quantization_float/2)
+      delta_angle -= node->motion_table.num_angle_quantization_float;
+    while (delta_angle <= -node->motion_table.num_angle_quantization_float/2)
+      delta_angle += node->motion_table.num_angle_quantization_float;
+    current_angle += delta_angle;
+    min_angle = std::min(min_angle, current_angle);
+    max_angle = std::max(max_angle, current_angle);
+    if (max_angle - min_angle > node->motion_table.max_analytic_expansion_angle_range) {
+      // Abort
+      failure = true;
+      break;
+    }
+
     // Turn the pose into a node, and check if it is valid
     index = NodeT::getIndex(
       static_cast<unsigned int>(reals[0]),
@@ -592,6 +644,20 @@ typename AStarAlgorithm<NodeT>::AnalyticExpansionNodes AStarAlgorithm<NodeT>::ge
       proposed_coordinates = {static_cast<float>(reals[0]), static_cast<float>(reals[1]), angle};
       next->setPose(proposed_coordinates);
       if (next->isNodeValid(_traverse_unknown, _collision_checker) && next != prev) {
+        // Check for max subelevation
+        float cost = next->getCost() / 252.0;
+        if (cost < min_cell_cost) {
+          min_cell_cost = cost;
+          if (max_cell_cost - min_cell_cost > node->motion_table.max_analytic_expansion_cost_subelevation) {
+            // Abort
+            next->setPose(initial_node_coords);
+            failure = true;
+            break;
+          }
+        }
+        else if (cost > max_cell_cost)
+          max_cell_cost = cost; // don't check, we don't want to discard cost superelevations
+        
         // Save the node, and its previous coordinates in case we need to abort
         possible_nodes.emplace_back(next, initial_node_coords, proposed_coordinates);
         prev = next;
