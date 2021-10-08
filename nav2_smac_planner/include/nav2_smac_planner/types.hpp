@@ -45,7 +45,6 @@ struct SearchInfo
   float max_analytic_expansion_angle_range;
   float max_analytic_expansion_cost_subelevation;
   float max_analytic_expansion_length;
-  std::string lattice_filepath;
   bool obstacle_heuristic_enabled;
   bool obstacle_heuristic_admissible;
   bool cache_obstacle_heuristic;
