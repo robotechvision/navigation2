@@ -106,7 +106,7 @@ void SmacPlannerHybrid::configure(
   node->get_parameter(name + ".change_penalty", _search_info.change_penalty);
   nav2_util::declare_parameter_if_not_declared(
     node, name + ".change_reverse_penalty", rclcpp::ParameterValue(0.5));
-  node->get_parameter(name + ".change_reverse_penalty", search_info.change_reverse_penalty);
+  node->get_parameter(name + ".change_reverse_penalty", _search_info.change_reverse_penalty);
   nav2_util::declare_parameter_if_not_declared(
     node, name + ".non_straight_penalty", rclcpp::ParameterValue(1.50));
   node->get_parameter(name + ".non_straight_penalty", _search_info.non_straight_penalty);
