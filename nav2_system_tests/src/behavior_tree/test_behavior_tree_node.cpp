@@ -55,6 +55,7 @@ public:
     const std::vector<std::string> plugin_libs = {
       "nav2_compute_path_to_pose_action_bt_node",
       "nav2_compute_path_through_poses_action_bt_node",
+      "nav2_smooth_path_action_bt_node",
       "nav2_follow_path_action_bt_node",
       "nav2_back_up_action_bt_node",
       "nav2_spin_action_bt_node",
@@ -69,6 +70,7 @@ public:
       "nav2_distance_controller_bt_node",
       "nav2_speed_controller_bt_node",
       "nav2_truncate_path_action_bt_node",
+      "nav2_truncate_path_local_action_bt_node",
       "nav2_goal_updater_node_bt_node",
       "nav2_recovery_node_bt_node",
       "nav2_pipeline_sequence_bt_node",
