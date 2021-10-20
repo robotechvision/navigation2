@@ -137,7 +137,7 @@ TEST(AStarTest, test_a_star_se2)
   double max_planning_time = 120.0;
   int num_it = 0;
 
-  a_star.initialize(false, max_iterations, it_on_approach, max_planning_time, 401, size_theta);
+  a_star.initialize(false, max_iterations, it_on_approach, max_planning_time, 401.0f, size_theta);
 
   nav2_costmap_2d::Costmap2D * costmapA =
     new nav2_costmap_2d::Costmap2D(100, 100, 0.1, 0.0, 0.0, 0);
@@ -184,7 +184,7 @@ TEST(AStarTest, test_a_star_se2)
     }
   }
 
-  a_star.initialize(false, max_iterations, it_on_approach, 401, size_theta);
+  a_star.initialize(false, max_iterations, it_on_approach, max_planning_time, 401.0f, size_theta);
   checker = std::make_unique<nav2_smac_planner::GridCollisionChecker>(costmapB, size_theta);
   checker->setFootprint(nav2_costmap_2d::Footprint(), true, 0.0);
   a_star.setCollisionChecker(checker.get());
