@@ -54,7 +54,7 @@ SmootherServer::SmootherServer()
     "robot_base_frame",
     rclcpp::ParameterValue(std::string("base_link")));
   declare_parameter("transform_tolerance", rclcpp::ParameterValue(0.1));
-  declare_parameter("footprint_tolerance", rclcpp::ParameterValue(std::numeric_limits<double>::infinity()));
+  declare_parameter("footprint_tolerance", rclcpp::ParameterValue(10.0));
   declare_parameter("smoother_plugins", default_ids_);
 }
 
