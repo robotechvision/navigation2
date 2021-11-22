@@ -24,12 +24,14 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <fstream>
 
 #include "nav2_smac_planner/a_star.hpp"
 using namespace std::chrono;  // NOLINT
 
 namespace nav2_smac_planner
 {
+
 
 template<typename NodeT>
 AStarAlgorithm<NodeT>::AStarAlgorithm(
@@ -175,7 +177,7 @@ void AStarAlgorithm<NodeT>::setGoal(
     static_cast<float>(my),
     static_cast<float>(dim_3));
 
-  if (!_search_info.cache_obstacle_heuristic || goal_coords != _goal_coordinates) {
+  if (_search_info.obstacle_heuristic_admissible || !_search_info.cache_obstacle_heuristic || goal_coords != _goal_coordinates) {
     NodeT::resetObstacleHeuristic(_costmap, mx, my);
   }
 
@@ -210,6 +212,23 @@ bool AStarAlgorithm<NodeT>::areInputsValid()
 
   return true;
 }
+
+int analytic_exp_start = 0;
+
+template<typename NodeT>
+struct NHLogger {
+  static void log(int iterations, NodeT *current_node, NodeT *goal_node, nav2_costmap_2d::Costmap2D *costmap) {
+    RCLCPP_INFO(rclcpp::get_logger("planner_server"), "it: %d (%lf %lf %lf, ac: %f, h: %f, mc: %f)", iterations,
+                current_node->pose.x, current_node->pose.y, current_node->pose.theta,
+                current_node->getAccumulatedCost(), current_node->getCost(),
+                NodeT::getHeuristicCost(current_node->pose, goal_node->pose, costmap));
+  }
+};
+
+template<>
+void NHLogger<nav2_smac_planner::Node2D>::log(int iterations, nav2_smac_planner::Node2D *current_node,
+                                              nav2_smac_planner::Node2D *goal_node,
+                                              nav2_costmap_2d::Costmap2D *costmap) {}
 
 template<typename NodeT>
 bool AStarAlgorithm<NodeT>::createPath(
@@ -273,6 +292,7 @@ bool AStarAlgorithm<NodeT>::createPath(
     }
 
     iterations++;
+    // NHLogger<NodeT>::log(iterations, current_node, getGoal(), _costmap);
 
     // 2) Mark Nbest as visited
     current_node->visited();
