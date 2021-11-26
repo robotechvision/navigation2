@@ -253,7 +253,7 @@ bool AStarAlgorithm<NodeT>::createPath(
   NodePtr neighbor = nullptr;
   NodePtr expansion_result = nullptr;
   float g_cost = 0.0;
-  NodeVector neighbors;
+  NodeCandidateVector neighbors;
   int approach_iterations = 0;
   NeighborIterator neighbor_iterator;
   int analytic_iterations = 0;
@@ -307,12 +307,16 @@ bool AStarAlgorithm<NodeT>::createPath(
 
     // 3) Check if we're at the goal, backtrace if required
     if (isGoal(current_node)) {
-      return current_node->backtracePath(path);
+      bool success = current_node->backtracePath(path);
+      _expander->cleanup();
+      return success;
     } else if (_best_heuristic_node.first < getToleranceHeuristic()) {
       // Optimization: Let us find when in tolerance and refine within reason
       approach_iterations++;
       if (approach_iterations >= getOnApproachMaxIterations()) {
-        return _graph.at(_best_heuristic_node.second).backtracePath(path);
+        bool success = _graph.at(_best_heuristic_node.second).backtracePath(path);
+        _expander->cleanup();
+        return success;
       }
     }
 
@@ -323,7 +327,7 @@ bool AStarAlgorithm<NodeT>::createPath(
     for (neighbor_iterator = neighbors.begin();
       neighbor_iterator != neighbors.end(); ++neighbor_iterator)
     {
-      neighbor = *neighbor_iterator;
+      neighbor = neighbor_iterator->first;
 
       // 4.1) Compute the cost to go to this node
       g_cost = current_node->getAccumulatedCost() + current_node->getTraversalCost(neighbor);
@@ -335,6 +339,9 @@ bool AStarAlgorithm<NodeT>::createPath(
 
         // 4.3) Add to queue with heuristic cost
         addNode(g_cost + getHeuristicCost(neighbor), neighbor);
+      }
+      else {
+        neighbor->setPose(neighbor_iterator->second);
       }
     }
   }
