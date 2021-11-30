@@ -162,6 +162,7 @@ class NodeHybrid
 public:
   typedef NodeHybrid * NodePtr;
   typedef std::unique_ptr<std::vector<NodeHybrid>> Graph;
+  typedef std::vector<NodePtr> NodeVector;
 
   /**
    * @class nav2_smac_planner::NodeHybrid::Coordinates
@@ -198,8 +199,6 @@ public:
   };
 
   typedef std::vector<Coordinates> CoordinateVector;
-  typedef std::pair<NodePtr, Coordinates> NodeCandidate;
-  typedef std::vector<NodeCandidate> NodeCandidateVector;
 
   /**
    * @brief A constructor for nav2_smac_planner::NodeHybrid
@@ -465,7 +464,7 @@ public:
     std::function<bool(const unsigned int &, nav2_smac_planner::NodeHybrid * &)> & validity_checker,
     GridCollisionChecker * collision_checker,
     const bool & traverse_unknown,
-    NodeCandidateVector & neighbors);
+    NodeVector & neighbors);
 
   /**
    * @brief Set the starting pose for planning, as a node index
