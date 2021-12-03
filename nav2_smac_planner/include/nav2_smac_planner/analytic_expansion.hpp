@@ -17,6 +17,8 @@
 
 #include <string>
 #include <vector>
+#include <list>
+#include <memory>
 
 #include "nav2_smac_planner/node_2d.hpp"
 #include "nav2_smac_planner/node_hybrid.hpp"
@@ -66,11 +68,6 @@ public:
     const SearchInfo & search_info,
     const bool & traverse_unknown,
     const unsigned int & dim_3_size);
-
-  /**
-   * @brief Destructor for analytic expansion object
-   */
-  ~AnalyticExpansion();
 
   /**
    * @brief Sets the collision checker and costmap to use in expansion validation
@@ -123,18 +120,12 @@ public:
   void cleanNode(const NodePtr & nodes);
 
 protected:
-
-  /**
-   * @brief Deallocates detached nodes previously created in setAnalyticPath
-   */
-  void cleanupDetachedNodes();
-
   MotionModel _motion_model;
   SearchInfo _search_info;
   bool _traverse_unknown;
   unsigned int _dim_3_size;
   GridCollisionChecker * _collision_checker;
-  std::list<NodePtr> _detached_nodes;
+  std::list<std::unique_ptr<NodeT>> _detached_nodes;
 };
 
 }  // namespace nav2_smac_planner
