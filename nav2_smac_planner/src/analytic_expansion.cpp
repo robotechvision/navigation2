@@ -39,6 +39,11 @@ AnalyticExpansion<NodeT>::AnalyticExpansion(
 }
 
 template<typename NodeT>
+AnalyticExpansion<NodeT>::~AnalyticExpansion() {
+  cleanupDetachedNodes();
+}
+
+template<typename NodeT>
 void AnalyticExpansion<NodeT>::setCollisionChecker(
   GridCollisionChecker * collision_checker)
 {
@@ -254,16 +259,17 @@ typename AnalyticExpansion<NodeT>::NodePtr AnalyticExpansion<NodeT>::setAnalytic
   const NodePtr & goal_node,
   const AnalyticExpansionNodes & expanded_nodes)
 {
+  cleanupDetachedNodes();
   // Legitimate final path - set the parent relationships, states, and poses
   NodePtr prev = node;
   for (const auto & node_pose : expanded_nodes) {
-    const auto & n = node_pose.node;
+    auto n = node_pose.node;
     cleanNode(n);
-    if (!n->wasVisited() && n->getIndex() != goal_node->getIndex()) {
-      // Make sure this node has not been visited by the regular algorithm.
-      // If it has been, there is the (slight) chance that it is in the path we are expanding
-      // from, so we should skip it.
-      // Skipping to the next node will still create a kinematically feasible path.
+    if (n->getIndex() != goal_node->getIndex()) {
+      if (n->wasVisited()) {
+        n = new NodeT(-1);
+        _detached_nodes.push_back(n);
+      }
       n->parent = prev;
       n->pose = node_pose.proposed_coords;
       n->visited();
@@ -290,7 +296,7 @@ void AnalyticExpansion<NodeT>::cleanNode(const NodePtr & /*expanded_nodes*/)
 }
 
 template<typename NodeT>
-void AnalyticExpansion<NodeT>::cleanup() {
+void AnalyticExpansion<NodeT>::cleanupDetachedNodes() {
   for (auto &node : _detached_nodes)
     delete node;
   _detached_nodes.clear();
