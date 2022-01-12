@@ -179,6 +179,7 @@ TEST(AStarTest, test_a_star_lattice)
 {
   nav2_smac_planner::SearchInfo info;
   info.change_penalty = 0.05;
+  info.change_reverse_penalty = 0.0;
   info.non_straight_penalty = 1.05;
   info.reverse_penalty = 2.0;
   info.analytic_expansion_ratio = 3.5;

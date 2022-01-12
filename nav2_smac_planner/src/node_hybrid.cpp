@@ -63,6 +63,7 @@ void HybridMotionTable::initDubin(
   non_straight_penalty = search_info.non_straight_penalty;
   cost_penalty = search_info.cost_penalty;
   reverse_penalty = search_info.reverse_penalty;
+  change_reverse_penalty = search_info.change_reverse_penalty;
 
   // if nothing changed, no need to re-compute primitives
   if (num_angle_quantization_in == num_angle_quantization &&
@@ -155,6 +156,7 @@ void HybridMotionTable::initReedsShepp(
   non_straight_penalty = search_info.non_straight_penalty;
   cost_penalty = search_info.cost_penalty;
   reverse_penalty = search_info.reverse_penalty;
+  change_reverse_penalty = search_info.change_reverse_penalty;
 
   // if nothing changed, no need to re-compute primitives
   if (num_angle_quantization_in == num_angle_quantization &&
@@ -335,6 +337,9 @@ float NodeHybrid::getTraversalCost(const NodePtr & child)
     // reverse direction
     travel_cost *= motion_table.reverse_penalty;
   }
+
+  if ((getMotionPrimitiveIndex() > 2) != (child->getMotionPrimitiveIndex() > 2))
+    travel_cost += travel_cost_raw * motion_table.change_reverse_penalty;
 
   return travel_cost;
 }
