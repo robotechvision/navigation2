@@ -123,6 +123,7 @@ struct HybridMotionTable
   float reverse_penalty;
   float change_reverse_penalty;
   bool obstacle_heuristic_admissible;
+  float max_analytic_expansion_angle_range;
   ompl::base::StateSpacePtr state_space;
   std::vector<std::vector<double>> delta_xs;
   std::vector<std::vector<double>> delta_ys;

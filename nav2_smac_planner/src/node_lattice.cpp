@@ -74,6 +74,8 @@ void LatticeMotionTable::initMotionModel(
   nlohmann::json json;
   latticeFile >> json;
   num_angle_quantization = lattice_metadata.number_of_headings;
+  float bin_size = 2.0f * static_cast<float>(M_PI) / static_cast<float>(num_angle_quantization);
+  max_analytic_expansion_angle_range = search_info.max_analytic_expansion_angle_range / bin_size;
 
   if (!state_space) {
     if (!allow_reverse_expansion) {

@@ -104,6 +104,7 @@ struct LatticeMotionTable
   float reverse_penalty;
   float change_reverse_penalty;
   bool obstacle_heuristic_admissible;
+  float max_analytic_expansion_angle_range;
   bool allow_reverse_expansion;
   std::vector<std::vector<MotionPrimitive>> motion_primitives;
   ompl::base::StateSpacePtr state_space;
