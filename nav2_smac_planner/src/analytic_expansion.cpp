@@ -210,7 +210,7 @@ typename AnalyticExpansion<NodeT>::AnalyticExpansionNodes AnalyticExpansion<Node
         float cost = next->getCost() / 252.0;
         if (cost < min_cell_cost) {
           min_cell_cost = cost;
-          if (max_cell_cost - min_cell_cost > node->motion_table.max_analytic_expansion_cost_subelevation) {
+          if (max_cell_cost - min_cell_cost > _search_info.max_analytic_expansion_cost_subelevation) {
             // Abort
             next->setPose(initial_node_coords);
             failure = true;

@@ -63,13 +63,14 @@ void HybridMotionTable::initDubin(
   non_straight_penalty = search_info.non_straight_penalty;
   cost_penalty = search_info.cost_penalty;
   reverse_penalty = search_info.reverse_penalty;
-  max_analytic_expansion_cost_subelevation = search_info.max_analytic_expansion_cost_subelevation;
 
   // if nothing changed, no need to re-compute primitives
   if (num_angle_quantization_in == num_angle_quantization &&
     min_turning_radius == search_info.minimum_turning_radius &&
     motion_model == MotionModel::DUBIN)
   {
+    bin_size =
+      2.0f * static_cast<float>(M_PI) / static_cast<float>(num_angle_quantization);
     max_analytic_expansion_angle_range = search_info.max_analytic_expansion_angle_range / bin_size;
     return;
   }
@@ -160,13 +161,14 @@ void HybridMotionTable::initReedsShepp(
   non_straight_penalty = search_info.non_straight_penalty;
   cost_penalty = search_info.cost_penalty;
   reverse_penalty = search_info.reverse_penalty;
-  max_analytic_expansion_cost_subelevation = search_info.max_analytic_expansion_cost_subelevation;
 
   // if nothing changed, no need to re-compute primitives
   if (num_angle_quantization_in == num_angle_quantization &&
     min_turning_radius == search_info.minimum_turning_radius &&
     motion_model == MotionModel::REEDS_SHEPP)
   {
+    bin_size =
+      2.0f * static_cast<float>(M_PI) / static_cast<float>(num_angle_quantization);
     max_analytic_expansion_angle_range = search_info.max_analytic_expansion_angle_range / bin_size;
     return;
   }
