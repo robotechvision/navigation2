@@ -465,9 +465,6 @@ void NodeHybrid::resetObstacleHeuristic(
       ceil(goal_y / 2.0) * sampled_costmap->getSizeInCellsX() + ceil(goal_x / 2.0));
   }
 
-  RCLCPP_INFO(rclcpp::get_logger("planner_server"), "Last search: runs: %d, expansions: %d, queue size: %d, time: %lf (%lf + %lf) ms",
-    run_number, total_expansions_cnt, (int)astar_2d_queue.size(), total_time, total_time_init, total_time - total_time_init);
-
   run_number = 1;
   total_expansions_cnt = 0;
   total_time = 0;
@@ -607,6 +604,7 @@ float NodeHybrid::getObstacleHeuristicAdmissible(
   const float & starting_cost = obstacle_heuristic_lookup_table[start_index];
   if (starting_cost > 0.0f) {
     // costs are doubled due to downsampling
+    node_points[start_index].intensity = 2.0 * starting_cost;
     return 2.0 * starting_cost;
   }
 
@@ -719,6 +717,7 @@ float NodeHybrid::getObstacleHeuristicAdmissible(
     run_number, start_x, start_y, goal_x, goal_y, goal_index, (int)astar_2d_h_table.size(), obstacle_heuristic_lookup_table[start_index], expansions_cnt, total_expansions_cnt, (int)astar_2d_queue.size(), time, time_init, time - time_init, total_time);
 
   // costs are doubled due to downsampling
+  node_points[start_index].intensity = 2.0 * starting_cost;
   return 2.0 * starting_cost;
 }
 
@@ -879,6 +878,9 @@ void NodeHybrid::getNeighbors(
 
 bool NodeHybrid::backtracePath(CoordinateVector & path)
 {
+  RCLCPP_INFO(rclcpp::get_logger("planner_server"), "Heuristic: runs: %d, expansions: %d, queue size: %d, time: %lf (%lf + %lf) ms",
+    run_number, total_expansions_cnt, (int)astar_2d_queue.size(), total_time, total_time_init, total_time - total_time_init);
+
   if (!this->parent) {
     return false;
   }
