@@ -422,7 +422,7 @@ void NodeHybrid::resetObstacleHeuristic(
     // must reset all values
     std::fill(
       obstacle_heuristic_lookup_table.begin(),
-      obstacle_heuristic_lookup_table.end(), 0.0f);
+      obstacle_heuristic_lookup_table.end(), 0.0);
   } else {
     unsigned int obstacle_size = obstacle_heuristic_lookup_table.size();
     obstacle_heuristic_lookup_table.resize(size, 0.0);
