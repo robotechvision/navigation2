@@ -40,6 +40,7 @@ struct SearchInfo
   float reverse_penalty;
   float cost_penalty;
   float change_reverse_penalty;
+  float retrospective_penalty;
   float analytic_expansion_ratio;
   float analytic_expansion_max_length;
   float max_analytic_expansion_angle_range;

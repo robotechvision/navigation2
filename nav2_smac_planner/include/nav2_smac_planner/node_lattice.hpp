@@ -103,6 +103,7 @@ struct LatticeMotionTable
   float cost_penalty;
   float reverse_penalty;
   float change_reverse_penalty;
+  float travel_distance_reward;
   bool obstacle_heuristic_admissible;
   float max_analytic_expansion_angle_range;
   bool allow_reverse_expansion;

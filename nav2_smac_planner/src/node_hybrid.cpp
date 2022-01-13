@@ -67,6 +67,7 @@ void HybridMotionTable::initDubin(
   cost_penalty = search_info.cost_penalty;
   reverse_penalty = search_info.reverse_penalty;
   change_reverse_penalty = search_info.change_reverse_penalty;
+  travel_distance_reward = 1.0f - search_info.retrospective_penalty;
   obstacle_heuristic_admissible = search_info.obstacle_heuristic_admissible;
 
   // if nothing changed, no need to re-compute primitives
@@ -333,7 +334,7 @@ float NodeHybrid::getTraversalCost(const NodePtr & child)
 
   float travel_cost = 0.0;
   float travel_cost_raw =
-    NodeHybrid::travel_distance_cost +
+    NodeHybrid::travel_distance_cost * travel_distance_reward +
     (NodeHybrid::travel_distance_cost * motion_table.cost_penalty * normalized_cost);
 
   if (child->getMotionPrimitiveIndex() == 0 || child->getMotionPrimitiveIndex() == 3) {
@@ -625,11 +626,11 @@ float NodeHybrid::getObstacleHeuristicAdmissible(
         }
 
         existing_cost = obstacle_heuristic_lookup_table[new_idx];
-        if (existing_cost < 0.0) {
+        if (existing_cost <= 0.0f) {
           travel_cost =
-            ((i <= 3) ? 1.0 : sqrt_2) * (1.0 + (cost_penalty * cost / 252.0));
+            ((i <= 3) ? 1.0f : sqrt_2) * (1.0f + (cost_penalty * cost / 252.0f));
           new_cost = c_cost + travel_cost;
-          if (-existing_cost > new_cost) {
+          if (existing_cost == 0.0f || -existing_cost > new_cost) {
             // the negative value means the cell is in the open set
             obstacle_heuristic_lookup_table[new_idx] = -new_cost;
             astar_2d_queue.emplace_back(
