@@ -73,6 +73,7 @@ void HybridMotionTable::initDubin(
   non_straight_penalty = search_info.non_straight_penalty;
   cost_penalty = search_info.cost_penalty;
   reverse_penalty = search_info.reverse_penalty;
+  travel_distance_reward = 1.0f - search_info.retrospective_penalty;
   obstacle_heuristic_admissible = search_info.obstacle_heuristic_admissible;
 
   // if nothing changed, no need to re-compute primitives
@@ -167,6 +168,7 @@ void HybridMotionTable::initReedsShepp(
   non_straight_penalty = search_info.non_straight_penalty;
   cost_penalty = search_info.cost_penalty;
   reverse_penalty = search_info.reverse_penalty;
+  travel_distance_reward = 1.0f - search_info.retrospective_penalty;
   obstacle_heuristic_admissible = search_info.obstacle_heuristic_admissible;
 
   // if nothing changed, no need to re-compute primitives
@@ -185,7 +187,6 @@ void HybridMotionTable::initReedsShepp(
   float angle = 2.0 * asin(sqrt(2.0) / (2 * min_turning_radius));
   bin_size =
     2.0f * static_cast<float>(M_PI) / static_cast<float>(num_angle_quantization);
-
   float increments;
   if (angle < bin_size) {
     increments = 1.0f;
@@ -328,7 +329,7 @@ float NodeHybrid::getTraversalCost(const NodePtr & child)
 
   float travel_cost = 0.0;
   float travel_cost_raw =
-    NodeHybrid::travel_distance_cost +
+    NodeHybrid::travel_distance_cost * motion_table.travel_distance_reward +
     (NodeHybrid::travel_distance_cost * motion_table.cost_penalty * normalized_cost);
 
   if (child->getMotionPrimitiveIndex() == 0 || child->getMotionPrimitiveIndex() == 3) {
@@ -412,7 +413,7 @@ void NodeHybrid::resetObstacleHeuristic(
     // must reset all values
     std::fill(
       obstacle_heuristic_lookup_table.begin(),
-      obstacle_heuristic_lookup_table.end(), 0.0f);
+      obstacle_heuristic_lookup_table.end(), 0.0);
     std::fill(
       node_points.begin(),
       node_points.end(), PointXYZI());
