@@ -62,7 +62,7 @@ public:
     const double & dist, const nav_msgs::msg::Path & path)
   {
     bool reversing;
-    return getLookAheadPoint(dist, path, reversing);
+    return getLookAheadPoint(dist, path, -1, reversing);
   }
 
   bool shouldRotateToPathWrapper(
