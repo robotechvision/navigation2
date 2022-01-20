@@ -98,10 +98,18 @@ public:
     return findDirectionChange(transformed_plan);
   }
 
-  nav_msgs::msg::Path transformGlobalPlanWrapper(
+  nav_msgs::msg::Path transformGlobalPlanFake(
     const geometry_msgs::msg::PoseStamped & pose)
   {
-    return transformGlobalPlan(pose);
+    nav_msgs::msg::Path transformed_plan;
+    transformed_plan.header = global_plan_.header;
+    for (auto gp_pose : global_plan_.poses) {
+      gp_pose.pose.position.x -= pose.pose.position.x;
+      gp_pose.pose.position.y -= pose.pose.position.y;
+      transformed_plan.poses.push_back(gp_pose);
+    }
+
+    return transformed_plan;
   }
 };
 
@@ -159,14 +167,6 @@ TEST(RegulatedPurePursuitTest, createCarrotMsg)
 TEST(RegulatedPurePursuitTest, findDirectionChange)
 {
   auto ctrl = std::make_shared<BasicAPIRPP>();
-  auto node = std::make_shared<rclcpp_lifecycle::LifecycleNode>("testRPP");
-  std::string name = "PathFollower";
-  auto tf = std::make_shared<tf2_ros::Buffer>(node->get_clock());
-  auto costmap = std::make_shared<nav2_costmap_2d::Costmap2DROS>("fake_costmap");
-  rclcpp_lifecycle::State state;
-  costmap->on_configure(state);
-  ctrl->configure(node, name, tf, costmap);
-
   geometry_msgs::msg::PoseStamped pose;
   pose.pose.position.x = 1.0;
   pose.pose.position.y = 0.0;
@@ -180,14 +180,14 @@ TEST(RegulatedPurePursuitTest, findDirectionChange)
   path.poses[2].pose.position.x = -1.0;
   path.poses[2].pose.position.y = -1.0;
   ctrl->setPlan(path);
-  auto transformed_plan = ctrl->transformGlobalPlanWrapper(pose);
+  auto transformed_plan = ctrl->transformGlobalPlanFake(pose);
   auto rtn = ctrl->findDirectionChangeWrapper(transformed_plan);
   EXPECT_EQ(rtn, sqrt(5.0));
 
   path.poses[2].pose.position.x = 3.0;
   path.poses[2].pose.position.y = 3.0;
   ctrl->setPlan(path);
-  transformed_plan = ctrl->transformGlobalPlanWrapper(pose);
+  transformed_plan = ctrl->transformGlobalPlanFake(pose);
   rtn = ctrl->findDirectionChangeWrapper(transformed_plan);
   EXPECT_EQ(rtn, std::numeric_limits<double>::max());
 }
