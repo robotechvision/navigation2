@@ -232,7 +232,7 @@ protected:
    * @param pose Pose input to determine the cusp position
    * @return robot distance from the cusp
    */
-  double findDirectionChange(const geometry_msgs::msg::PoseStamped & pose);
+  double findDirectionChange(const nav_msgs::msg::Path & transformed_plan);
 
   /**
    * @brief Callback executed when a parameter change is detected
