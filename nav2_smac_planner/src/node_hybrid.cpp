@@ -454,7 +454,6 @@ void NodeHybrid::resetObstacleHeuristic(
     sampled_costmap->getSizeInCellsX() * sampled_costmap->getSizeInCellsY());
 
   // Set initial goal point to queue from. Divided by 2 due to downsampled costmap.
-  const unsigned int size_x = sampled_costmap->getSizeInCellsX();
   const unsigned int goal_index = floor(goal_y / 2.0) * size_x + floor(goal_x / 2.0);
   obstacle_heuristic_queue.emplace_back(
     distanceHeuristic2D(goal_index, size_x, start_x, start_y), goal_index);
@@ -582,8 +581,12 @@ float NodeHybrid::getObstacleHeuristic(
   duration<double> time_span_init = duration_cast<duration<double>>(b - a);
   double time_init = time_span_init.count()*1000;
   total_time_init += time_init;
-  RCLCPP_INFO(rclcpp::get_logger("planner_server"), "Run: %d (%d %d -> %d %d (%d/%d) = %f), expansions: %d (total: %d), queue size: %d, time: %lf (%lf + %lf, total: %lf) ms",
-    run_number, start_x, start_y, goal_x, goal_y, goal_index, (int)astar_2d_h_table.size(), obstacle_heuristic_lookup_table[start_index], expansions_cnt, total_expansions_cnt, (int)astar_2d_queue.size(), time, time_init, time - time_init, total_time);
+
+  const unsigned int goal_y = floor(goal_coords.y / 2.0);
+  const unsigned int goal_x = floor(goal_coords.x / 2.0);
+  const unsigned int goal_index = goal_y * size_x + goal_x;
+  RCLCPP_INFO(rclcpp::get_logger("planner_server"), "Run: %d (%u %u -> %u %u (%d/%d) = %f), expansions: %d (total: %d), queue size: %d, time: %lf (%lf + %lf, total: %lf) ms",
+    run_number, start_x, start_y, goal_x, goal_y, goal_index, (int)obstacle_heuristic_lookup_table.size(), obstacle_heuristic_lookup_table[start_index], expansions_cnt, total_expansions_cnt, (int)obstacle_heuristic_queue.size(), time, time_init, time - time_init, total_time);
 
   // return requested_node_cost which has been updated by the search
   // costs are doubled due to downsampling
@@ -749,7 +752,7 @@ void NodeHybrid::getNeighbors(
 bool NodeHybrid::backtracePath(CoordinateVector & path)
 {
   RCLCPP_INFO(rclcpp::get_logger("planner_server"), "Heuristic: runs: %d, expansions: %d, queue size: %d, time: %lf (%lf + %lf) ms",
-    run_number, total_expansions_cnt, (int)astar_2d_queue.size(), total_time, total_time_init, total_time - total_time_init);
+    run_number, total_expansions_cnt, (int)obstacle_heuristic_queue.size(), total_time, total_time_init, total_time - total_time_init);
 
   if (!this->parent) {
     return false;
