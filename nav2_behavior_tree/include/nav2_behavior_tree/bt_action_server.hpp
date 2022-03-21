@@ -97,6 +97,9 @@ public:
     const unsigned publisher_port,
     const unsigned server_port);
 
+  void setFileMonitoring(
+    const bool enable);
+
   /**
    * @brief Replace current BT with another one
    * @param bt_xml_filename The file containing the new BT, uses default filename if empty
@@ -244,6 +247,7 @@ protected:
 
   // Parameters for Groot monitoring
   bool enable_groot_monitoring_ = true;
+  bool enable_file_monitoring_ = true;
   int groot_publisher_port_ = 1666;
   int groot_server_port_ = 1667;
 

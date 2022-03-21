@@ -85,7 +85,6 @@ bool BtActionServer<ActionT>::on_configure()
 
   // Support for handling the topic-based goal pose from rviz
   client_node_ = std::make_shared<rclcpp::Node>("_", options);
-
   action_server_ = std::make_shared<ActionServer>(
     node->get_node_base_interface(),
     node->get_node_clock_interface(),
@@ -99,18 +98,14 @@ bool BtActionServer<ActionT>::on_configure()
   bt_loop_duration_ = std::chrono::milliseconds(timeout);
   node->get_parameter("default_server_timeout", timeout);
   default_server_timeout_ = std::chrono::milliseconds(timeout);
-
   // Create the class that registers our custom nodes and executes the BT
   bt_ = std::make_unique<nav2_behavior_tree::BehaviorTreeEngine>(plugin_lib_names_);
-
   // Create the blackboard that will be shared by all of the nodes in the tree
   blackboard_ = BT::Blackboard::create();
-
   // Put items on the blackboard
   blackboard_->set<rclcpp::Node::SharedPtr>("node", client_node_);  // NOLINT
   blackboard_->set<std::chrono::milliseconds>("server_timeout", default_server_timeout_);  // NOLINT
   blackboard_->set<std::chrono::milliseconds>("bt_loop_duration", bt_loop_duration_);  // NOLINT
-
   return true;
 }
 
@@ -143,6 +138,7 @@ bool BtActionServer<ActionT>::on_cleanup()
   blackboard_.reset();
   bt_->haltAllActions(tree_.rootNode());
   bt_->resetGrootMonitor();
+  bt_->resetFileMonitor();
   bt_.reset();
   return true;
 }
@@ -159,6 +155,13 @@ void BtActionServer<ActionT>::setGrootMonitoring(
 }
 
 template<class ActionT>
+void BtActionServer<ActionT>::setFileMonitoring(
+  const bool enable)
+{
+  enable_file_monitoring_ = enable;
+}
+
+template<class ActionT>
 bool BtActionServer<ActionT>::loadBehaviorTree(const std::string & bt_xml_filename)
 {
   // Empty filename is default for backward compatibility
@@ -172,25 +175,21 @@ bool BtActionServer<ActionT>::loadBehaviorTree(const std::string & bt_xml_filena
 
   // if a new tree is created, than the ZMQ Publisher must be destroyed
   bt_->resetGrootMonitor();
-
+  bt_->resetFileMonitor();
   // Read the input BT XML from the specified file into a string
   std::ifstream xml_file(filename);
-
   if (!xml_file.good()) {
     RCLCPP_ERROR(logger_, "Couldn't open input XML file: %s", filename.c_str());
     return false;
   }
-
   auto xml_string = std::string(
     std::istreambuf_iterator<char>(xml_file),
     std::istreambuf_iterator<char>());
-
   // Create the Behavior Tree from the XML input
   tree_ = bt_->createTreeFromText(xml_string, blackboard_);
   topic_logger_ = std::make_unique<RosTopicLogger>(client_node_, tree_);
 
   current_bt_xml_filename_ = filename;
-
   // Enable monitoring with Groot
   if (enable_groot_monitoring_) {
     // optionally add max_msg_per_second = 25 (default) here
@@ -201,6 +200,19 @@ bool BtActionServer<ActionT>::loadBehaviorTree(const std::string & bt_xml_filena
         action_name_.c_str(), groot_publisher_port_, groot_server_port_);
     } catch (const std::logic_error & e) {
       RCLCPP_ERROR(logger_, "ZMQ already enabled, Error: %s", e.what());
+    }
+  }
+
+  // Enable monitoring with FileLogger
+  if (enable_file_monitoring_) {
+    // optionally add max_msg_per_second = 25 (default) here
+    try {
+      bt_->addFileMonitoring(&tree_);
+      RCLCPP_INFO(
+        logger_, "Enabling File monitoring for %s",
+        action_name_.c_str());
+    } catch (const std::logic_error & e) {
+      RCLCPP_ERROR(logger_, "FileLogger already enabled, Error: %s", e.what());
     }
   }
 
