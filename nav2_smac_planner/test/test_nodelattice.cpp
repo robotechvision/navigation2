@@ -71,13 +71,13 @@ TEST(NodeLatticeTest, parser_test)
   EXPECT_NEAR(myPrimitives[0].arc_length, 0.58225, 0.01);
   EXPECT_NEAR(myPrimitives[0].straight_length, 0.06631, 0.01);
 
-  EXPECT_NEAR(myPrimitives[0].poses[0]._x, 0.0, 0.01);
-  EXPECT_NEAR(myPrimitives[0].poses[0]._y, 0.0, 0.01);
-  EXPECT_NEAR(myPrimitives[0].poses[0]._theta, 0.0, 0.01);
+  EXPECT_NEAR(myPrimitives[0].poses[0]._x, 0.04981, 0.01);
+  EXPECT_NEAR(myPrimitives[0].poses[0]._y, -0.00236, 0.01);
+  EXPECT_NEAR(myPrimitives[0].poses[0]._theta, -0.0948654249597968, 0.01);
 
-  EXPECT_NEAR(myPrimitives[0].poses[1]._x, 0.05284, 0.01);
-  EXPECT_NEAR(myPrimitives[0].poses[1]._y, -0.00266, 0.01);
-  EXPECT_NEAR(myPrimitives[0].poses[1]._theta, -0.10064988343582648, 0.015);
+  EXPECT_NEAR(myPrimitives[0].poses[1]._x, 0.09917, 0.01);
+  EXPECT_NEAR(myPrimitives[0].poses[1]._y, -0.00944, 0.01);
+  EXPECT_NEAR(myPrimitives[0].poses[1]._theta, -0.1897308499195936, 0.015);
 }
 
 TEST(NodeLatticeTest, test_node_lattice_neighbors_and_parsing)
@@ -94,7 +94,6 @@ TEST(NodeLatticeTest, test_node_lattice_neighbors_and_parsing)
   info.retrospective_penalty = 0.0;
   info.analytic_expansion_ratio = 1;
   info.lattice_filepath = filePath;
-  info.obstacle_heuristic_admissible = false;
   info.cache_obstacle_heuristic = true;
   info.allow_reverse_expansion = true;
 
@@ -133,7 +132,6 @@ TEST(NodeLatticeTest, test_node_lattice_conversions)
   info.retrospective_penalty = 0.0;
   info.analytic_expansion_ratio = 1;
   info.lattice_filepath = filePath;
-  info.obstacle_heuristic_admissible = false;
   info.cache_obstacle_heuristic = true;
 
   unsigned int x = 100;
@@ -166,10 +164,9 @@ TEST(NodeLatticeTest, test_node_lattice)
   info.change_penalty = 1;
   info.reverse_penalty = 1;
   info.cost_penalty = 1;
-  info.retrospective_penalty = 0.0;
+  info.retrospective_penalty = 0.1;
   info.analytic_expansion_ratio = 1;
   info.lattice_filepath = filePath;
-  info.obstacle_heuristic_admissible = false;
   info.cache_obstacle_heuristic = true;
   info.allow_reverse_expansion = true;
 
@@ -244,7 +241,6 @@ TEST(NodeLatticeTest, test_get_neighbors)
   info.analytic_expansion_ratio = 1;
   info.retrospective_penalty = 0.0;
   info.lattice_filepath = filePath;
-  info.obstacle_heuristic_admissible = false;
   info.cache_obstacle_heuristic = true;
   info.allow_reverse_expansion = true;
 

@@ -84,11 +84,6 @@ void SmacPlannerLattice::configure(
     node, name + ".cache_obstacle_heuristic", rclcpp::ParameterValue(false));
   node->get_parameter(name + ".cache_obstacle_heuristic", _search_info.cache_obstacle_heuristic);
   nav2_util::declare_parameter_if_not_declared(
-    node, name + ".obstacle_heuristic_admissible", rclcpp::ParameterValue(true));
-  node->get_parameter(
-    name + ".obstacle_heuristic_admissible",
-    _search_info.obstacle_heuristic_admissible);
-  nav2_util::declare_parameter_if_not_declared(
     node, name + ".reverse_penalty", rclcpp::ParameterValue(2.0));
   node->get_parameter(name + ".reverse_penalty", _search_info.reverse_penalty);
   nav2_util::declare_parameter_if_not_declared(
@@ -100,6 +95,12 @@ void SmacPlannerLattice::configure(
   nav2_util::declare_parameter_if_not_declared(
     node, name + ".cost_penalty", rclcpp::ParameterValue(2.0));
   node->get_parameter(name + ".cost_penalty", _search_info.cost_penalty);
+  nav2_util::declare_parameter_if_not_declared(
+    node, name + ".retrospective_penalty", rclcpp::ParameterValue(0.015));
+  node->get_parameter(name + ".retrospective_penalty", _search_info.retrospective_penalty);
+  nav2_util::declare_parameter_if_not_declared(
+    node, name + ".rotation_penalty", rclcpp::ParameterValue(5.0));
+  node->get_parameter(name + ".rotation_penalty", _search_info.rotation_penalty);
   nav2_util::declare_parameter_if_not_declared(
     node, name + ".analytic_expansion_ratio", rclcpp::ParameterValue(3.5));
   node->get_parameter(name + ".analytic_expansion_ratio", _search_info.analytic_expansion_ratio);
@@ -362,6 +363,9 @@ SmacPlannerLattice::dynamicParametersCallback(std::vector<rclcpp::Parameter> par
       } else if (name == _name + ".cost_penalty") {
         reinit_a_star = true;
         _search_info.cost_penalty = static_cast<float>(parameter.as_double());
+      } else if (name == _name + ".rotation_penalty") {
+        reinit_a_star = true;
+        _search_info.rotation_penalty = static_cast<float>(parameter.as_double());
       } else if (name == _name + ".analytic_expansion_ratio") {
         reinit_a_star = true;
         _search_info.analytic_expansion_ratio = static_cast<float>(parameter.as_double());

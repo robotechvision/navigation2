@@ -225,14 +225,20 @@ protected:
    * @param path Current global path
    * @return Lookahead point
    */
-  geometry_msgs::msg::PoseStamped getLookAheadPoint(const double &, const nav_msgs::msg::Path &);
+  geometry_msgs::msg::PoseStamped getLookAheadPoint(
+    const double &, const nav_msgs::msg::Path &, const int &, bool &);
 
   /**
    * @brief checks for the cusp position
    * @param pose Pose input to determine the cusp position
    * @return robot distance from the cusp
    */
-  double findDirectionChange(const geometry_msgs::msg::PoseStamped & pose);
+  double findDirectionChange(const nav_msgs::msg::Path & transformed_plan);
+
+  double
+  orientedPoseDistance(
+    const geometry_msgs::msg::PoseStamped & pose1,
+    const geometry_msgs::msg::PoseStamped & pose2);
 
   /**
    * @brief Callback executed when a parameter change is detected
@@ -250,6 +256,7 @@ protected:
   rclcpp::Clock::SharedPtr clock_;
 
   double desired_linear_vel_, base_desired_linear_vel_;
+  double max_angular_vel_;
   double lookahead_dist_;
   double rotate_to_heading_angular_vel_;
   double max_lookahead_dist_;
@@ -272,6 +279,8 @@ protected:
   double rotate_to_heading_min_angle_;
   double goal_dist_tol_;
   bool allow_reversing_;
+  bool use_path_orientations_;
+  double angular_distance_weight_;
 
   nav_msgs::msg::Path global_plan_;
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> global_path_pub_;

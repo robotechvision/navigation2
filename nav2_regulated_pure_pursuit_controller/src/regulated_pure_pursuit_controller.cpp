@@ -63,6 +63,8 @@ void RegulatedPurePursuitController::configure(
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".desired_linear_vel", rclcpp::ParameterValue(0.5));
   declare_parameter_if_not_declared(
+    node, plugin_name_ + ".max_angular_vel", rclcpp::ParameterValue(0.5));
+  declare_parameter_if_not_declared(
     node, plugin_name_ + ".lookahead_dist", rclcpp::ParameterValue(0.6));
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".min_lookahead_dist", rclcpp::ParameterValue(0.3));
@@ -105,9 +107,14 @@ void RegulatedPurePursuitController::configure(
     node, plugin_name_ + ".max_angular_accel", rclcpp::ParameterValue(3.2));
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".allow_reversing", rclcpp::ParameterValue(false));
+  declare_parameter_if_not_declared(
+    node, plugin_name_ + ".use_path_orientations", rclcpp::ParameterValue(false));
+  declare_parameter_if_not_declared(
+    node, plugin_name_ + ".angular_distance_weight", rclcpp::ParameterValue(0.2));
 
   node->get_parameter(plugin_name_ + ".desired_linear_vel", desired_linear_vel_);
   base_desired_linear_vel_ = desired_linear_vel_;
+  node->get_parameter(plugin_name_ + ".max_angular_vel", max_angular_vel_);
   node->get_parameter(plugin_name_ + ".lookahead_dist", lookahead_dist_);
   node->get_parameter(plugin_name_ + ".min_lookahead_dist", min_lookahead_dist_);
   node->get_parameter(plugin_name_ + ".max_lookahead_dist", max_lookahead_dist_);
@@ -146,6 +153,8 @@ void RegulatedPurePursuitController::configure(
   node->get_parameter(plugin_name_ + ".rotate_to_heading_min_angle", rotate_to_heading_min_angle_);
   node->get_parameter(plugin_name_ + ".max_angular_accel", max_angular_accel_);
   node->get_parameter(plugin_name_ + ".allow_reversing", allow_reversing_);
+  node->get_parameter(plugin_name_ + ".use_path_orientations", use_path_orientations_);
+  node->get_parameter(plugin_name_ + ".angular_distance_weight", angular_distance_weight_);
   node->get_parameter("controller_frequency", control_frequency);
 
   transform_tolerance_ = tf2::durationFromSec(transform_tolerance);
@@ -267,18 +276,20 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   // Find look ahead distance and point on path and publish
   double lookahead_dist = getLookAheadDistance(speed);
 
+  int dir_change_index = -1;
   // Check for reverse driving
   if (allow_reversing_) {
     // Cusp check
-    double dist_to_direction_change = findDirectionChange(pose);
+    dir_change_index = findDirectionChange(transformed_plan);
 
-    // if the lookahead distance is further than the cusp, use the cusp distance instead
-    if (dist_to_direction_change < lookahead_dist) {
-      lookahead_dist = dist_to_direction_change;
-    }
+    // // if the lookahead distance is further than the cusp, use the cusp distance instead
+    // if (dist_to_direction_change < lookahead_dist) {
+    //   lookahead_dist = dist_to_direction_change;
+    // }
   }
 
-  auto carrot_pose = getLookAheadPoint(lookahead_dist, transformed_plan);
+  bool reversing;
+  auto carrot_pose = getLookAheadPoint(lookahead_dist, transformed_plan, dir_change_index, reversing);
   carrot_pub_->publish(createCarrotMsg(carrot_pose));
 
   double linear_vel, angular_vel;
@@ -296,10 +307,7 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   }
 
   // Setting the velocity direction
-  double sign = 1.0;
-  if (allow_reversing_) {
-    sign = carrot_pose.pose.position.x >= 0.0 ? 1.0 : -1.0;
-  }
+  double sign = allow_reversing_ && reversing ? -1.0 : 1.0;
 
   linear_vel = desired_linear_vel_;
 
@@ -316,8 +324,21 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
       lookahead_dist, curvature, speed,
       costAtPose(pose.pose.position.x, pose.pose.position.y), linear_vel, sign);
 
-    // Apply curvature to angular velocity after constraining linear velocity
-    angular_vel = linear_vel * curvature;
+    if (carrot_dist2 < goal_dist_tol_*0.8) {
+      // Rotate to goal heading
+      tf2::Quaternion q;
+      tf2::fromMsg(carrot_pose.pose.orientation, q);
+      double angle = q.getAngle() * (q.getZ() >= 0 ? 1.0 : -1.0);
+      angular_vel = max_angular_vel_ * (angle < 0.0 ? -1.0 : 1.0);
+    } else {
+      // Apply curvature to angular velocity after constraining linear velocity
+      angular_vel = curvature * linear_vel;
+      if (std::abs(angular_vel) > max_angular_vel_) {
+        linear_vel *= max_angular_vel_ / std::abs(angular_vel);
+        angular_vel = max_angular_vel_ * (angular_vel < 0.0 ? -1.0 : 1.0);
+      }
+    }
+
   }
 
   // Collision checking on this velocity heading
@@ -367,17 +388,49 @@ void RegulatedPurePursuitController::rotateToHeading(
 
 geometry_msgs::msg::PoseStamped RegulatedPurePursuitController::getLookAheadPoint(
   const double & lookahead_dist,
-  const nav_msgs::msg::Path & transformed_plan)
+  const nav_msgs::msg::Path & transformed_plan,
+  const int & dir_change_index,
+  bool & reversing)
 {
   // Find the first pose which is at a distance greater than the lookahead distance
   auto goal_pose_it = std::find_if(
     transformed_plan.poses.begin(), transformed_plan.poses.end(), [&](const auto & ps) {
       return hypot(ps.pose.position.x, ps.pose.position.y) >= lookahead_dist;
     });
-
+  if (dir_change_index != -1) {
+    auto dir_change_it = transformed_plan.poses.begin() + dir_change_index;
+    if (hypot(dir_change_it->pose.position.x, dir_change_it->pose.position.y) <= lookahead_dist)
+      goal_pose_it = dir_change_it;
+  }
   // If the no pose is not far enough, take the last pose
   if (goal_pose_it == transformed_plan.poses.end()) {
     goal_pose_it = std::prev(transformed_plan.poses.end());
+  }
+
+  if (!use_path_orientations_) {
+    reversing = goal_pose_it->pose.position.x < 0.0;
+  } else {
+    // compare pose orientation with movement vector
+    geometry_msgs::msg::Vector3 mvmt_vec;
+    if (goal_pose_it == transformed_plan.poses.begin()) {
+      mvmt_vec.x = goal_pose_it->pose.position.x;
+      mvmt_vec.y = goal_pose_it->pose.position.y;
+    }
+    else {
+      // take previous segment instead of next to preserve consistent movement before cusp
+      auto prev_pose_it = std::prev(goal_pose_it);
+      mvmt_vec.x = goal_pose_it->pose.position.x - prev_pose_it->pose.position.x;
+      mvmt_vec.y = goal_pose_it->pose.position.y - prev_pose_it->pose.position.y;
+    }
+
+    tf2::Quaternion q;
+    tf2::fromMsg(goal_pose_it->pose.orientation, q);
+    double angle = q.getAngle() * (q.getZ() >= 0 ? 1.0 : -1.0);
+    geometry_msgs::msg::Vector3 ori_vec;
+    ori_vec.x = cos(angle);
+    ori_vec.y = sin(angle);
+
+    reversing = (ori_vec.x * mvmt_vec.x) + (ori_vec.y * mvmt_vec.y) < 0.0;
   }
 
   return *goal_pose_it;
@@ -610,8 +663,10 @@ nav_msgs::msg::Path RegulatedPurePursuitController::transformGlobalPlan(
   auto transformation_begin =
     nav2_util::geometry_utils::min_by(
     global_plan_.poses.begin(), global_plan_.poses.end(),
-    [&robot_pose](const geometry_msgs::msg::PoseStamped & ps) {
-      return euclidean_distance(robot_pose, ps);
+    [&robot_pose, this](const geometry_msgs::msg::PoseStamped & ps) {
+      return use_path_orientations_ ?
+        orientedPoseDistance(robot_pose, ps) :
+        euclidean_distance(robot_pose, ps);
     });
 
   // Find points definitely outside of the costmap so we won't transform them.
@@ -653,31 +708,48 @@ nav_msgs::msg::Path RegulatedPurePursuitController::transformGlobalPlan(
 }
 
 double RegulatedPurePursuitController::findDirectionChange(
-  const geometry_msgs::msg::PoseStamped & pose)
+  const nav_msgs::msg::Path & transformed_plan)
 {
   // Iterating through the global path to determine the position of the cusp
-  for (unsigned int pose_id = 1; pose_id < global_plan_.poses.size() - 1; ++pose_id) {
+  for (unsigned int pose_id = 1; pose_id < transformed_plan.poses.size() - 1; ++pose_id) {
     // We have two vectors for the dot product OA and AB. Determining the vectors.
-    double oa_x = global_plan_.poses[pose_id].pose.position.x -
-      global_plan_.poses[pose_id - 1].pose.position.x;
-    double oa_y = global_plan_.poses[pose_id].pose.position.y -
-      global_plan_.poses[pose_id - 1].pose.position.y;
-    double ab_x = global_plan_.poses[pose_id + 1].pose.position.x -
-      global_plan_.poses[pose_id].pose.position.x;
-    double ab_y = global_plan_.poses[pose_id + 1].pose.position.y -
-      global_plan_.poses[pose_id].pose.position.y;
+    double oa_x = transformed_plan.poses[pose_id].pose.position.x -
+      transformed_plan.poses[pose_id - 1].pose.position.x;
+    double oa_y = transformed_plan.poses[pose_id].pose.position.y -
+      transformed_plan.poses[pose_id - 1].pose.position.y;
+    double ab_x = transformed_plan.poses[pose_id + 1].pose.position.x -
+      transformed_plan.poses[pose_id].pose.position.x;
+    double ab_y = transformed_plan.poses[pose_id + 1].pose.position.y -
+      transformed_plan.poses[pose_id].pose.position.y;
 
     /* Checking for the existance of cusp, in the path, using the dot product
     and determine it's distance from the robot. If there is no cusp in the path,
     then just determine the distance to the goal location. */
     if ( (oa_x * ab_x) + (oa_y * ab_y) < 0.0) {
-      auto x = global_plan_.poses[pose_id].pose.position.x - pose.pose.position.x;
-      auto y = global_plan_.poses[pose_id].pose.position.y - pose.pose.position.y;
-      return hypot(x, y);  // returning the distance if there is a cusp
+      return pose_id;
+      // returning the distance if there is a cusp
+      // return hypot(
+      //   transformed_plan.poses[pose_id].pose.position.x,
+      //   transformed_plan.poses[pose_id].pose.position.y);
     }
   }
 
-  return std::numeric_limits<double>::max();
+  return -1.0;
+}
+
+double
+RegulatedPurePursuitController::orientedPoseDistance(
+  const geometry_msgs::msg::PoseStamped & pose1,
+  const geometry_msgs::msg::PoseStamped & pose2)
+{
+  double dx = pose1.pose.position.x - pose2.pose.position.x;
+  double dy = pose1.pose.position.y - pose2.pose.position.y;
+  tf2::Quaternion q1;
+  tf2::convert(pose1.pose.orientation, q1);
+  tf2::Quaternion q2;
+  tf2::convert(pose2.pose.orientation, q2);
+  double da = angular_distance_weight_ * std::abs(q1.angleShortestPath(q2));
+  return std::sqrt(dx * dx + dy * dy + da * da);
 }
 
 bool RegulatedPurePursuitController::transformPose(

@@ -114,7 +114,6 @@ TEST(SmacTest, test_smac_lattice_reconfigure)
     {rclcpp::Parameter("test.allow_unknown", false),
       rclcpp::Parameter("test.max_iterations", -1),
       rclcpp::Parameter("test.cache_obstacle_heuristic", true),
-      rclcpp::Parameter("test.obstacle_heuristic_admissible", false),
       rclcpp::Parameter("test.reverse_penalty", 5.0),
       rclcpp::Parameter("test.change_penalty", 1.0),
       rclcpp::Parameter("test.non_straight_penalty", 2.0),
@@ -125,6 +124,7 @@ TEST(SmacTest, test_smac_lattice_reconfigure)
       rclcpp::Parameter("test.lookup_table_size", 30.0),
       rclcpp::Parameter("test.smooth_path", false),
       rclcpp::Parameter("test.analytic_expansion_max_length", 42.0),
+      rclcpp::Parameter("test.rotation_penalty", 42.0),
       rclcpp::Parameter("test.allow_reverse_expansion", true)});
 
   try {

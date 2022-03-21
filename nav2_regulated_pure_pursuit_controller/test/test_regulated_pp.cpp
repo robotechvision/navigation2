@@ -61,7 +61,8 @@ public:
   geometry_msgs::msg::PoseStamped getLookAheadPointWrapper(
     const double & dist, const nav_msgs::msg::Path & path)
   {
-    return getLookAheadPoint(dist, path);
+    bool reversing;
+    return getLookAheadPoint(dist, path, -1, reversing);
   }
 
   bool shouldRotateToPathWrapper(
@@ -93,9 +94,23 @@ public:
   }
 
   double findDirectionChangeWrapper(
+    const nav_msgs::msg::Path & transformed_plan)
+  {
+    return findDirectionChange(transformed_plan);
+  }
+
+  nav_msgs::msg::Path transformGlobalPlanFake(
     const geometry_msgs::msg::PoseStamped & pose)
   {
-    return findDirectionChange(pose);
+    nav_msgs::msg::Path transformed_plan;
+    transformed_plan.header = global_plan_.header;
+    for (auto gp_pose : global_plan_.poses) {
+      gp_pose.pose.position.x -= pose.pose.position.x;
+      gp_pose.pose.position.y -= pose.pose.position.y;
+      transformed_plan.poses.push_back(gp_pose);
+    }
+
+    return transformed_plan;
   }
 };
 
@@ -166,13 +181,15 @@ TEST(RegulatedPurePursuitTest, findDirectionChange)
   path.poses[2].pose.position.x = -1.0;
   path.poses[2].pose.position.y = -1.0;
   ctrl->setPlan(path);
-  auto rtn = ctrl->findDirectionChangeWrapper(pose);
+  auto transformed_plan = ctrl->transformGlobalPlanFake(pose);
+  auto rtn = ctrl->findDirectionChangeWrapper(transformed_plan);
   EXPECT_EQ(rtn, sqrt(5.0));
 
   path.poses[2].pose.position.x = 3.0;
   path.poses[2].pose.position.y = 3.0;
   ctrl->setPlan(path);
-  rtn = ctrl->findDirectionChangeWrapper(pose);
+  transformed_plan = ctrl->transformGlobalPlanFake(pose);
+  rtn = ctrl->findDirectionChangeWrapper(transformed_plan);
   EXPECT_EQ(rtn, std::numeric_limits<double>::max());
 }
 

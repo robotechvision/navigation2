@@ -104,8 +104,8 @@ struct LatticeMotionTable
   float reverse_penalty;
   float change_reverse_penalty;
   float travel_distance_reward;
-  bool obstacle_heuristic_admissible;
   float max_analytic_expansion_angle_range;
+  float rotation_penalty;
   bool allow_reverse_expansion;
   std::vector<std::vector<MotionPrimitive>> motion_primitives;
   ompl::base::StateSpacePtr state_space;
@@ -355,10 +355,11 @@ public:
    */
   static void resetObstacleHeuristic(
     nav2_costmap_2d::Costmap2D * costmap,
+    const unsigned int & start_x, const unsigned int & start_y,
     const unsigned int & goal_x, const unsigned int & goal_y)
   {
     // State Lattice and Hybrid-A* share this heuristics
-    NodeHybrid::resetObstacleHeuristic(costmap, goal_x, goal_y);
+    NodeHybrid::resetObstacleHeuristic(costmap, start_x, start_y, goal_x, goal_y);
   }
 
   /**
