@@ -104,6 +104,22 @@ BehaviorTreeEngine::resetGrootMonitor()
   }
 }
 
+void
+BehaviorTreeEngine::addFileMonitoring(
+  BT::Tree * tree)
+{
+  file_monitor_ = std::make_unique<BT::FileLogger>(
+    *tree, "/usr/local/robotechvision/groot.fbl", 100);
+}
+
+void
+BehaviorTreeEngine::resetFileMonitor()
+{
+  if (file_monitor_) {
+    file_monitor_.reset();
+  }
+}
+
 // In order to re-run a Behavior Tree, we must be able to reset all nodes to the initial state
 void
 BehaviorTreeEngine::haltAllActions(BT::TreeNode * root_node)
