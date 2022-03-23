@@ -16,7 +16,7 @@
 
 #include "path_utils.hpp"
 
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 namespace path_utils
 {
