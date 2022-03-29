@@ -124,6 +124,8 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & /*state*/)
     get_parameter("pose_groot_publisher_port").as_int(),
     get_parameter("pose_groot_server_port").as_int());
 
+  pose_navigator_->getActionServer()->setFileMonitoring(true);
+
   /*if (!poses_navigator_->on_configure(
       shared_from_this(), plugin_lib_names, feedback_utils, &plugin_muxer_))
   {
