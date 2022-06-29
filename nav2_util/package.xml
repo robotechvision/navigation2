@@ -10,7 +10,8 @@
   <license>BSD-3-Clause</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <build_depend>libboost-program-options-dev</build_depend>
+  <!-- incorrect version for rolling on ubuntu:focal - this must be installed manually (see project README.md) -->
+  <!-- <build_depend>libboost-program-options-dev</build_depend> -->
   <depend>nav2_common</depend>
 
   <depend>geometry_msgs</depend>
@@ -29,7 +30,8 @@
   <depend>launch_testing_ament_cmake</depend>
   <depend>action_msgs</depend>
 
-  <exec_depend>libboost-program-options</exec_depend>
+  <!-- incorrect version for rolling on ubuntu:focal - this must be installed manually (see project README.md) -->
+  <!-- <exec_depend>libboost-program-options</exec_depend> -->
 
   <test_depend>ament_lint_common</test_depend>
   <test_depend>ament_lint_auto</test_depend>
