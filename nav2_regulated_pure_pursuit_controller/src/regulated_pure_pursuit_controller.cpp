@@ -776,7 +776,7 @@ bool RegulatedPurePursuitController::transformPose(
   }
 
   try {
-    tf_->transform(in_pose, out_pose, frame, transform_tolerance_);
+    tf_->transform(in_pose, out_pose, frame, tf2::TimePointZero, "odom", transform_tolerance_);
     out_pose.header.frame_id = frame;
     return true;
   } catch (tf2::TransformException & ex) {
