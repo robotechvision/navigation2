@@ -288,6 +288,7 @@ bool PlannerServer::getStartPose(
 {
   if (goal->use_start) {
     start = goal->start;
+    start.header.stamp = now();
   } else if (!costmap_ros_->getRobotPose(start)) {
     action_server->terminate_current();
     return false;
@@ -382,8 +383,10 @@ PlannerServer::computePlanThroughPoses()
         curr_start = start;
       } else {
         curr_start = goal->goals[i - 1];
+        curr_start.header.stamp = now();
       }
       curr_goal = goal->goals[i];
+      curr_goal.header.stamp = now();
 
       // Transform them into the global frame
       if (!transformPosesToGlobalFrame(action_server_poses_, curr_start, curr_goal)) {
@@ -457,6 +460,7 @@ PlannerServer::computePlan()
 
     // Transform them into the global frame
     geometry_msgs::msg::PoseStamped goal_pose = goal->goal;
+    goal_pose.header.stamp = now();
     if (!transformPosesToGlobalFrame(action_server_pose_, start, goal_pose)) {
       return;
     }
