@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <limits>
 
 #include "nav_msgs/msg/path.hpp"
 
@@ -28,7 +29,7 @@ namespace nav2_behavior_tree
 {
 
 /**
- * @brief A BT::ActionNodeBase to shorten path by some distance
+ * @brief A BT::ActionNodeBase to shorten path to some distance around robot
  */
 class TruncatePathLocal : public BT::ActionNodeBase
 {
@@ -68,9 +69,14 @@ public:
         "pose", "Manually specified pose to be used"
         "if overriding current robot pose"),
       BT::InputPort<double>(
-        "angular_distance_weight", 0.2,
-        "Weight of angular distance relative to positional distance when "
-        "finding which path pose is closest to robot"),
+        "angular_distance_weight", 0.0,
+        "Weight of angular distance relative to positional distance when finding which path "
+        "pose is closest to robot. Not applicable on paths without orientations assigned"),
+      BT::InputPort<double>(
+        "max_robot_pose_search_dist", std::numeric_limits<double>::infinity(),
+        "Maximum forward integrated distance along the path (starting from the last detected pose) "
+        "to bound the search for the closest pose to the robot. When set to infinity (default), "
+        "whole path is searched every time"),
     };
   }
 
@@ -86,12 +92,31 @@ private:
    */
   BT::NodeStatus tick() override;
 
+  /**
+   * @brief Get either specified input pose or robot pose in path frame
+   * @param path_frame_id Frame ID of path
+   * @param pose Output pose
+   * @return True if succeeded
+   */
+  bool getRobotPose(std::string path_frame_id, geometry_msgs::msg::PoseStamped & pose);
+
+  /**
+   * @brief A custom pose distance method which takes angular distance into account
+   * in addition to spatial distance (to improve picking a correct pose near cusps and loops)
+   * @param pose1 Distance is computed between this pose and pose2
+   * @param pose2 Distance is computed between this pose and pose1
+   * @param angular_distance_weight Weight of angular distance relative to spatial distance
+   * (1.0 means that 1 radian of angular distance corresponds to 1 meter of spatial distance)
+   */
   static double poseDistance(
     const geometry_msgs::msg::PoseStamped & pose1,
     const geometry_msgs::msg::PoseStamped & pose2,
     const double angular_distance_weight);
 
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+
+  nav_msgs::msg::Path path_;
+  nav_msgs::msg::Path::_poses_type::iterator closest_pose_detection_begin_;
 };
 
 }  // namespace nav2_behavior_tree
