@@ -1,11 +1,15 @@
 # Constrained Smoother
 
-A smoother plugin for `nav2_smoother` based on the original deprecated smoother in `nav2_smac_planner` and put into operational state by (**RoboTech Vision**)[https://robotechvision.com/]. Suitable for applications which need planned global path to be pushed away from obstacles and/or for Reeds-Shepp motion models. Example of configuration (see indoor_navigation package of this repo for a full launch configuration):
+A smoother plugin for `nav2_smoother` based on the original deprecated smoother in `nav2_smac_planner` by [Steve Macenski](https://www.linkedin.com/in/steve-macenski-41a985101/) and put into operational state by [**RoboTech Vision**](https://robotechvision.com/). Suitable for applications which need planned global path to be pushed away from obstacles and/or for Reeds-Shepp motion models.
+
+See documentation on navigation.ros.org: https://navigation.ros.org/configuration/packages/configuring-constrained-smoother.html
+
+
+Example of configuration (see indoor_navigation package of this repo for a full launch configuration):
 
 ```
 smoother_server:
   ros__parameters:
-    use_sim_time: True
     smoother_plugins: ["SmoothPath"]
 
     SmoothPath:
@@ -40,3 +44,5 @@ smoother_server:
 ```
 
 Note: Smoothing paths which contain multiple subsequent poses at one point (e.g. in-place rotations from Smac lattice planners) is currently not supported
+
+Note: Constrained Smoother is recommended to be used on a path with a bounded length. TruncatePathLocal BT Node can be used for extracting a relevant path section around robot (in combination with DistanceController to achieve periodicity)

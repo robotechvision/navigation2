@@ -60,8 +60,8 @@ public:
    */
   void configure(
     const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
-    std::string name, const std::shared_ptr<tf2_ros::Buffer> & tf,
-    const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> & costmap_ros) override;
+    std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
+    std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros) override;
 
   /**
    * @brief Cleanup controller state machine
@@ -208,19 +208,27 @@ protected:
    */
   double costAtPose(const double & x, const double & y);
 
+  double approachVelocityScalingFactor(
+    const nav_msgs::msg::Path & path
+  ) const;
+
+  void applyApproachVelocityScaling(
+    const nav_msgs::msg::Path & path,
+    double & linear_vel
+  ) const;
+
   /**
    * @brief apply regulation constraints to the system
    * @param linear_vel robot command linear velocity input
-   * @param dist_error error in the carrot distance and lookahead distance
    * @param lookahead_dist optimal lookahead distance
    * @param curvature curvature of path
    * @param speed Speed of robot
    * @param pose_cost cost at this pose
    */
   void applyConstraints(
-    const double & dist_error, const double & lookahead_dist,
     const double & curvature, const geometry_msgs::msg::Twist & speed,
-    const double & pose_cost, double & linear_vel, double & sign);
+    const double & pose_cost, const nav_msgs::msg::Path & path,
+    double & linear_vel, double & sign);
 
   /**
    * @brief Find the intersection a circle and a line segment.
@@ -288,6 +296,7 @@ protected:
   bool use_velocity_scaled_lookahead_dist_;
   tf2::Duration transform_tolerance_;
   double min_approach_linear_velocity_;
+  double approach_velocity_scaling_dist_;
   double control_duration_;
   double max_allowed_time_to_collision_up_to_carrot_;
   bool use_regulated_linear_velocity_scaling_;
