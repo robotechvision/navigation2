@@ -89,6 +89,28 @@ inline double euclidean_distance(
 }
 
 /**
+ * @brief Get the oriented distance between 2 geometry_msgs::Poses
+ * @param pose1 First pose
+ * @param pose2 Second pose
+ * @param angular_distance_weight Weight of orientational vs positional distance
+ * @return double oriented distance
+ */
+inline double oriented_distance(
+  const geometry_msgs::msg::PoseStamped & pose1,
+  const geometry_msgs::msg::PoseStamped & pose2,
+  double angular_distance_weight)
+{
+  double dx = pose1.pose.position.x - pose2.pose.position.x;
+  double dy = pose1.pose.position.y - pose2.pose.position.y;
+  tf2::Quaternion q1;
+  tf2::convert(pose1.pose.orientation, q1);
+  tf2::Quaternion q2;
+  tf2::convert(pose2.pose.orientation, q2);
+  double da = angular_distance_weight * std::abs(q1.angleShortestPath(q2));
+  return std::sqrt(dx * dx + dy * dy + da * da);
+}
+
+/**
  * @brief Get the L2 distance between 2 geometry_msgs::PoseStamped
  * @param pos1 First pose
  * @param pos1 Second pose
