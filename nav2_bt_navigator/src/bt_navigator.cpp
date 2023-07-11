@@ -166,19 +166,19 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & /*state*/)
         get_logger(), "Creating navigator id %s of type %s",
         navigator_ids[i].c_str(), navigator_type.c_str());
       navigators_.push_back(class_loader_.createUniqueInstance(navigator_type));
-      if (navigator_ids[i] == "navigate_to_pose")
-      {
-        if (auto bt_navigator = dynamic_cast<nav2_core::BehaviorTreeNavigator<nav2_msgs::action::NavigateToPose> *>(navigators_.back().get()))
-          bt_navigator->setGrootMonitoring(
-            get_parameter("enable_groot_monitoring").as_bool(),
-            get_parameter("pose_groot_publisher_port").as_int(),
-            get_parameter("pose_groot_server_port").as_int());
-      }
       if (!navigators_.back()->on_configure(
           node, plugin_lib_names, feedback_utils,
           &plugin_muxer_, odom_smoother_))
       {
         return nav2_util::CallbackReturn::FAILURE;
+      }
+      if (navigator_ids[i] == "navigate_to_pose")
+      {
+        if (auto bt_navigator = dynamic_cast<nav2_core::BehaviorTreeNavigator<nav2_msgs::action::NavigateToPose> *>(navigators_.back().get()))
+          bt_navigator->setGrootMonitoring(
+              get_parameter("enable_groot_monitoring").as_bool(),
+              get_parameter("pose_groot_publisher_port").as_int(),
+              get_parameter("pose_groot_server_port").as_int());
       }
     } catch (const pluginlib::PluginlibException & ex) {
       RCLCPP_FATAL(
