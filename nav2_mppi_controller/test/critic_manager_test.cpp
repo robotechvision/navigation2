@@ -63,12 +63,12 @@ public:
 
   bool getDummyCriticInitialized()
   {
-    return dynamic_cast<DummyCritic *>(critics_[0].get())->initialized_;
+    return reinterpret_cast<DummyCritic *>(critics_[0].get())->initialized_;
   }
 
   bool getDummyCriticScored()
   {
-    return dynamic_cast<DummyCritic *>(critics_[0].get())->scored_;
+    return reinterpret_cast<DummyCritic *>(critics_[0].get())->scored_;
   }
 };
 

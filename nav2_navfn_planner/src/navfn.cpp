@@ -452,8 +452,8 @@ NavFn::updateCell(int n)
       // use quadratic approximation
       // might speed this up through table lookup, but still have to
       //   do the divide
-      float d = dc / hf;
-      float v = -0.2301 * d * d + 0.5307 * d + 0.7040;
+      float d_loc = dc / hf;
+      float v = -0.2301 * d_loc * d_loc + 0.5307 * d_loc + 0.7040;
       pot = ta + hf * v;
     }
 
@@ -527,8 +527,8 @@ NavFn::updateCellAstar(int n)
       // use quadratic approximation
       // might speed this up through table lookup, but still have to
       //   do the divide
-      float d = dc / hf;
-      float v = -0.2301 * d * d + 0.5307 * d + 0.7040;
+      float d_loc = dc / hf;
+      float v = -0.2301 * d_loc * d_loc + 0.5307 * d_loc + 0.7040;
       pot = ta + hf * v;
     }
 
@@ -834,22 +834,22 @@ NavFn::calcPath(int n, int * st)
       // check eight neighbors to find the lowest
       int minc = stc;
       int minp = potarr[stc];
-      int st = stcpx - 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st = stc - 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st = stc + 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st = stcnx - 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
+      int st_loc = stcpx - 1;
+      if (potarr[st_loc] < minp) { minp = potarr[st_loc]; minc = st_loc;}
+      st_loc++;
+      if (potarr[st_loc] < minp) { minp = potarr[st_loc]; minc = st_loc;}
+      st_loc++;
+      if (potarr[st_loc] < minp) { minp = potarr[st_loc]; minc = st_loc;}
+      st_loc = stc - 1;
+      if (potarr[st_loc] < minp) { minp = potarr[st_loc]; minc = st_loc;}
+      st_loc = stc + 1;
+      if (potarr[st_loc] < minp) { minp = potarr[st_loc]; minc = st_loc;}
+      st_loc = stcnx - 1;
+      if (potarr[st_loc] < minp) { minp = potarr[st_loc]; minc = st_loc;}
+      st_loc++;
+      if (potarr[st_loc] < minp) { minp = potarr[st_loc]; minc = st_loc;}
+      st_loc++;
+      if (potarr[st_loc] < minp) { minp = potarr[st_loc]; minc = st_loc;}
       stc = minc;
       dx = 0;
       dy = 0;

@@ -70,6 +70,8 @@ public:
     reset();
   }
 
+  virtual ~MapBasedQueue() {}
+
   /**
    * @brief Clear the queue
    */

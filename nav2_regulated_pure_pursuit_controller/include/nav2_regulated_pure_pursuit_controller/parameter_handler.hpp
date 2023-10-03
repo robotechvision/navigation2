@@ -53,11 +53,8 @@ struct Parameters
   double curvature_lookahead_dist;
   bool use_rotate_to_heading;
   double max_angular_accel;
-  double max_angular_vel;
   double rotate_to_heading_min_angle;
   bool allow_reversing;
-  bool use_path_orientations;
-  double angular_distance_weight;
   double max_robot_pose_search_dist;
   bool use_interpolation;
   bool use_collision_detection;

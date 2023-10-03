@@ -71,8 +71,7 @@ public:
   geometry_msgs::msg::PoseStamped getLookAheadPointWrapper(
     const double & dist, const nav_msgs::msg::Path & path)
   {
-    bool reversing;
-    return getLookAheadPoint(dist, path, -1, reversing);
+    return getLookAheadPoint(dist, path);
   }
 
   bool shouldRotateToPathWrapper(
@@ -106,20 +105,6 @@ public:
     const nav_msgs::msg::Path & transformed_plan)
   {
     return findVelocitySignChange(transformed_plan);
-  }
-
-  nav_msgs::msg::Path transformGlobalPlanFake(
-    const geometry_msgs::msg::PoseStamped & pose)
-  {
-    nav_msgs::msg::Path transformed_plan;
-    transformed_plan.header = global_plan_.header;
-    for (auto gp_pose : global_plan_.poses) {
-      gp_pose.pose.position.x -= pose.pose.position.x;
-      gp_pose.pose.position.y -= pose.pose.position.y;
-      transformed_plan.poses.push_back(gp_pose);
-    }
-
-    return transformed_plan;
   }
 
   nav_msgs::msg::Path transformGlobalPlanWrapper(
@@ -211,15 +196,13 @@ TEST(RegulatedPurePursuitTest, findVelocitySignChange)
   path.poses[2].pose.position.x = -1.0;
   path.poses[2].pose.position.y = -1.0;
   ctrl->setPlan(path);
-  auto transformed_plan = ctrl->transformGlobalPlanFake(pose);
-  auto rtn = ctrl->findVelocitySignChangeWrapper(transformed_plan);
+  auto rtn = ctrl->findVelocitySignChangeWrapper(path);
   EXPECT_EQ(rtn, sqrt(8.0));
 
   path.poses[2].pose.position.x = 3.0;
   path.poses[2].pose.position.y = 3.0;
   ctrl->setPlan(path);
-  transformed_plan = ctrl->transformGlobalPlanFake(pose);
-  rtn = ctrl->findVelocitySignChangeWrapper(transformed_plan);
+  rtn = ctrl->findVelocitySignChangeWrapper(path);
   EXPECT_EQ(rtn, std::numeric_limits<double>::max());
 }
 

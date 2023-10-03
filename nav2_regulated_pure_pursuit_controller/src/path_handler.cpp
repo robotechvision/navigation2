@@ -28,7 +28,6 @@ namespace nav2_regulated_pure_pursuit_controller
 {
 
 using nav2_util::geometry_utils::euclidean_distance;
-using nav2_util::geometry_utils::oriented_distance;
 
 PathHandler::PathHandler(
   tf2::Duration transform_tolerance,
@@ -48,7 +47,7 @@ double PathHandler::getCostmapMaxExtent() const
 
 nav_msgs::msg::Path PathHandler::transformGlobalPlan(
   const geometry_msgs::msg::PoseStamped & pose,
-  double max_robot_pose_search_dist, bool use_path_orientations, double angular_distance_weight)
+  double max_robot_pose_search_dist)
 {
   if (global_plan_.poses.empty()) {
     throw nav2_core::InvalidPath("Received plan with zero length");
@@ -70,18 +69,16 @@ nav_msgs::msg::Path PathHandler::transformGlobalPlan(
   auto transformation_begin =
     nav2_util::geometry_utils::min_by(
     global_plan_.poses.begin(), closest_pose_upper_bound,
-    [&robot_pose, use_path_orientations, angular_distance_weight](const geometry_msgs::msg::PoseStamped & ps) {
-      return use_path_orientations ?
-        oriented_distance(robot_pose, ps, angular_distance_weight) :
-        euclidean_distance(robot_pose, ps);
+    [&robot_pose](const geometry_msgs::msg::PoseStamped & ps) {
+      return euclidean_distance(robot_pose, ps);
     });
 
   // We'll discard points on the plan that are outside the local costmap
   const double max_costmap_extent = getCostmapMaxExtent();
   auto transformation_end = std::find_if(
     transformation_begin, global_plan_.poses.end(),
-    [&](const auto & pose) {
-      return euclidean_distance(pose, robot_pose) > max_costmap_extent;
+    [&](const auto & global_plan_pose) {
+      return euclidean_distance(global_plan_pose, robot_pose) > max_costmap_extent;
     });
 
   // Lambda to transform a PoseStamped from global frame to local

@@ -187,8 +187,7 @@ protected:
    * @param path Current global path
    * @return Lookahead point
    */
-  geometry_msgs::msg::PoseStamped getLookAheadPoint(
-    const double &, const nav_msgs::msg::Path &, const int &, bool &);
+  geometry_msgs::msg::PoseStamped getLookAheadPoint(const double &, const nav_msgs::msg::Path &);
 
   /**
    * @brief checks for the cusp position
@@ -196,11 +195,6 @@ protected:
    * @return robot distance from the cusp
    */
   double findVelocitySignChange(const nav_msgs::msg::Path & transformed_plan);
-
-  double
-  orientedPoseDistance(
-    const geometry_msgs::msg::PoseStamped & pose1,
-    const geometry_msgs::msg::PoseStamped & pose2);
 
   rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
   std::shared_ptr<tf2_ros::Buffer> tf_;

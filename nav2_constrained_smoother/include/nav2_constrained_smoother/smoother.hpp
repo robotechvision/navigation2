@@ -194,8 +194,8 @@ private:
       // update cusp zone costmap weights
       if (is_cusp) {
         double len_to_cusp = current_segment_len;
-        for (int i = potential_cusp_funcs.size() - 1; i >= 0; i--) {
-          auto & f = potential_cusp_funcs[i];
+        for (int j = potential_cusp_funcs.size() - 1; j >= 0; j--) {
+          auto & f = potential_cusp_funcs[j];
           double new_weight =
             params.cusp_costmap_weight * (1.0 - len_to_cusp / cusp_half_length) +
             params.costmap_weight * len_to_cusp / cusp_half_length;

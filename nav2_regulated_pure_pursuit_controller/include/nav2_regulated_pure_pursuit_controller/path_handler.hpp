@@ -62,7 +62,7 @@ public:
    */
   nav_msgs::msg::Path transformGlobalPlan(
     const geometry_msgs::msg::PoseStamped & pose,
-    double max_robot_pose_search_dist, bool use_path_orientations, double angular_distance_weight);
+    double max_robot_pose_search_dist);
 
   /**
    * @brief Transform a pose to another frame.
