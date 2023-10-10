@@ -12,13 +12,11 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <build_depend>nav2_common</build_depend>
 
-  <!-- don't depend on navigation2 which depends on nav2_system_tests (long build) -->
-  <!-- <build_depend>navigation2</build_depend> -->
+  <build_depend>navigation2</build_depend>
   <build_depend>launch_ros</build_depend>
 
   <exec_depend>launch_ros</exec_depend>
-  <!-- don't depend on navigation2 which depends on nav2_system_tests (long build) -->
-  <!-- <exec_depend>navigation2</exec_depend> -->
+  <exec_depend>navigation2</exec_depend>
   <exec_depend>nav2_common</exec_depend>
   <!-- slam_toolbox not present in rolling -->
   <!-- <exec_depend>slam_toolbox</exec_depend> -->
