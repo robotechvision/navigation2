@@ -52,6 +52,7 @@ PlannerServer::PlannerServer(const rclcpp::NodeOptions & options)
   // Declare this node's parameters
   declare_parameter("planner_plugins", default_ids_);
   declare_parameter("expected_planner_frequency", 1.0);
+  declare_parameter("costmap_name", "global_costmap");
 
   get_parameter("planner_plugins", planner_ids_);
   if (planner_ids_ == default_ids_) {
@@ -61,8 +62,10 @@ PlannerServer::PlannerServer(const rclcpp::NodeOptions & options)
   }
 
   // Setup the global costmap
+  std::string costmap_name;
+  get_parameter("costmap_name", costmap_name);
   costmap_ros_ = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
-    "global_costmap", std::string{get_namespace()}, "global_costmap",
+      "global_costmap", std::string{get_namespace()}, costmap_name,
     get_parameter("use_sim_time").as_bool());
 }
 

@@ -70,6 +70,7 @@ public:
     if (getInput("server_name", remapped_action_name)) {
       action_name_ = remapped_action_name;
     }
+    RCLCPP_INFO(node_->get_logger(), "Creating BT action client (%s) for %s", xml_tag_name.c_str(), action_name_.c_str());
     createActionClient(action_name_);
 
     // Give the derive class a chance to do any initialization
