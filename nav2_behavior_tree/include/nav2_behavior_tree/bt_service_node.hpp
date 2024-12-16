@@ -109,7 +109,8 @@ public:
   {
     BT::PortsList basic = {
       BT::InputPort<std::string>("service_name", "please_set_service_name_in_BT_Node"),
-      BT::InputPort<std::chrono::milliseconds>("server_timeout")
+      BT::InputPort<std::chrono::milliseconds>("server_timeout"),
+      BT::InputPort<bool>("synchronous", "False","Whether it returns RUNNING status or just SUCCESS/FAILURE")
     };
     basic.insert(addition.begin(), addition.end());
 
@@ -186,9 +187,11 @@ public:
   {
     auto elapsed = (node_->now() - sent_time_).to_chrono<std::chrono::milliseconds>();
     auto remaining = server_timeout_ - elapsed;
+    bool synchronous = false;
 
     if (remaining > std::chrono::milliseconds(0)) {
-      auto timeout = remaining > bt_loop_duration_ ? bt_loop_duration_ : remaining;
+      getInput("synchronous", synchronous);
+      auto timeout = (remaining > bt_loop_duration_ && !synchronous) ? bt_loop_duration_ : remaining;
 
       rclcpp::FutureReturnCode rc;
       rc = callback_group_executor_.spin_until_future_complete(future_result_, timeout);

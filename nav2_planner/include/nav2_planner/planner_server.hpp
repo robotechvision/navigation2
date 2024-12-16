@@ -39,6 +39,7 @@
 #include "pluginlib/class_list_macros.hpp"
 #include "nav2_core/global_planner.hpp"
 #include "nav2_msgs/srv/is_path_valid.hpp"
+#include "nav2_rtv_msgs/srv/compute_path_to_pose.hpp"
 #include "nav2_core/planner_exceptions.hpp"
 
 namespace nav2_planner
@@ -112,6 +113,7 @@ protected:
   using ActionThroughPosesGoal = ActionThroughPoses::Goal;
   using ActionServerToPose = nav2_util::SimpleActionServer<ActionToPose>;
   using ActionServerThroughPoses = nav2_util::SimpleActionServer<ActionThroughPoses>;
+  using ServiceToPose = nav2_rtv_msgs::srv::ComputePathToPose;
 
   /**
    * @brief Check if an action server is valid / active
@@ -205,6 +207,16 @@ protected:
     std::shared_ptr<nav2_msgs::srv::IsPathValid::Response> response);
 
   /**
+   * @brief The service callback which calls planner to get the path
+   * ComputePathToPose
+   * @param request to the service
+   * @param response from the service
+   */
+  void computePlanService(
+    const std::shared_ptr<ServiceToPose::Request> request,
+    std::shared_ptr<ServiceToPose::Response> response);
+
+  /**
    * @brief Publish a path for visualization purposes
    * @param path Reference to Global Path
    */
@@ -257,6 +269,8 @@ protected:
 
   // Service to determine if the path is valid
   rclcpp::Service<nav2_msgs::srv::IsPathValid>::SharedPtr is_path_valid_service_;
+  rclcpp::Service<ServiceToPose>::SharedPtr compute_path_to_pose_service_;
+
 };
 
 }  // namespace nav2_planner

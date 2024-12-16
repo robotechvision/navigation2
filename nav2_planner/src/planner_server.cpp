@@ -185,6 +185,12 @@ PlannerServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
       &PlannerServer::isPathValid, this,
       std::placeholders::_1, std::placeholders::_2));
 
+  compute_path_to_pose_service_ = node->create_service<nav2_rtv_msgs::srv::ComputePathToPose>(
+    "compute_path_to_pose",
+    std::bind(
+      &PlannerServer::computePlanService, this,
+      std::placeholders::_1, std::placeholders::_2));
+
   // Add callback for dynamic parameters
   dyn_params_handler_ = node->add_on_set_parameters_callback(
     std::bind(&PlannerServer::dynamicParametersCallback, this, _1));
@@ -664,6 +670,68 @@ void PlannerServer::isPathValid(
         response->is_valid = false;
       }
     }
+  }
+}
+
+void PlannerServer::computePlanService(
+  const nav2_rtv_msgs::srv::ComputePathToPose::Request::SharedPtr request,
+  nav2_rtv_msgs::srv::ComputePathToPose::Response::SharedPtr response)
+{
+  geometry_msgs::msg::PoseStamped start_pose;
+  geometry_msgs::msg::PoseStamped goal_pose;
+
+  try {
+    // Use start pose if provided otherwise use current robot pose
+    if (request->use_start) {
+      start_pose = request->start;
+      start_pose.header.stamp = now();
+    }
+    else if (!costmap_ros_->getRobotPose(start_pose)) {
+      throw nav2_core::PlannerTFError("Unable to get start pose");
+    }
+
+    // Transform them into the global frame
+    goal_pose = request->goal;
+    goal_pose.header.stamp = now();
+    if (!transformPosesToGlobalFrame(start_pose, goal_pose)) {
+      throw nav2_core::PlannerTFError("Unable to transform poses to global frame");
+    }
+
+    response->path = getPlan(start_pose, goal_pose, request->planner_id);
+    if (!validatePath<nav2_rtv_msgs::srv::ComputePathToPose>(goal_pose, response->path, request->planner_id)) {
+      throw nav2_core::NoValidPathCouldBeFound(request->planner_id + " generated a empty path");
+    }
+
+    // Publish the plan for visualization purposes
+    publishPlan(response->path);
+
+  } catch (nav2_core::InvalidPlanner & ex) {
+    exceptionWarning(start_pose, goal_pose, request->planner_id, ex);
+    response->error_code = ServiceToPose::Request::INVALID_PLANNER;
+  } catch (nav2_core::StartOccupied & ex) {
+    exceptionWarning(start_pose, goal_pose, request->planner_id, ex);
+    response->error_code = ServiceToPose::Request::START_OCCUPIED;
+  } catch (nav2_core::GoalOccupied & ex) {
+    exceptionWarning(start_pose, goal_pose, request->planner_id, ex);
+    response->error_code = ServiceToPose::Request::GOAL_OCCUPIED;
+  } catch (nav2_core::NoValidPathCouldBeFound & ex) {
+    exceptionWarning(start_pose, goal_pose, request->planner_id, ex);
+    response->error_code = ServiceToPose::Request::NO_VALID_PATH;
+  } catch (nav2_core::PlannerTimedOut & ex) {
+    exceptionWarning(start_pose, goal_pose, request->planner_id, ex);
+    response->error_code = ServiceToPose::Request::TIMEOUT;
+  } catch (nav2_core::StartOutsideMapBounds & ex) {
+    exceptionWarning(start_pose, goal_pose, request->planner_id, ex);
+    response->error_code = ServiceToPose::Request::START_OUTSIDE_MAP;
+  } catch (nav2_core::GoalOutsideMapBounds & ex) {
+    exceptionWarning(start_pose, goal_pose, request->planner_id, ex);
+    response->error_code = ServiceToPose::Request::GOAL_OUTSIDE_MAP;
+  } catch (nav2_core::PlannerTFError & ex) {
+    exceptionWarning(start_pose, goal_pose, request->planner_id, ex);
+    response->error_code = ServiceToPose::Request::TF_ERROR;
+  } catch (std::exception & ex) {
+    exceptionWarning(start_pose, goal_pose, request->planner_id, ex);
+    response->error_code = ServiceToPose::Request::UNKNOWN;
   }
 }
 

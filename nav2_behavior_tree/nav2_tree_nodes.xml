@@ -82,6 +82,17 @@
       <output_port name="error_code_id">"Compute path to pose error code"</output_port>
     </Action>
 
+    <Action ID="ComputePathToPoseService">
+      <input_port name="goal">Destination to plan to</input_port>
+      <input_port name="start">Start pose of the path if overriding current robot pose</input_port>
+      <input_port name="planner_id">Mapped name to the planner plugin type to use</input_port>
+      <input_port name="server_timeout">Server timeout</input_port>
+      <input_port name="service_name">Service name</input_port>
+      <input_port name="synchronous">Whether it returns RUNNING status or just SUCCESS/FAILURE</input_port>
+      <output_port name="path">Path created by ComputePathToPose node</output_port>
+      <output_port name="error_code_id">"Compute path to pose error code"</output_port>
+    </Action>
+
     <Action ID="ComputePathThroughPoses">
       <input_port name="goals">Destinations to plan through</input_port>
       <input_port name="start">Start pose of the path if overriding current robot pose</input_port>

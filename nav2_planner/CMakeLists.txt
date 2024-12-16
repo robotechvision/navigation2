@@ -11,6 +11,7 @@ find_package(std_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(nav2_util REQUIRED)
 find_package(nav2_msgs REQUIRED)
+find_package(nav2_rtv_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
@@ -37,6 +38,7 @@ set(dependencies
   visualization_msgs
   nav2_util
   nav2_msgs
+  nav2_rtv_msgs
   nav_msgs
   geometry_msgs
   builtin_interfaces

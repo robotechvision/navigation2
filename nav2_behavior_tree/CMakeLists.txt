@@ -10,6 +10,7 @@ find_package(builtin_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
+find_package(nav2_rtv_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(behaviortree_cpp_v3 REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -33,6 +34,7 @@ set(dependencies
   geometry_msgs
   sensor_msgs
   nav2_msgs
+  nav2_rtv_msgs
   nav_msgs
   behaviortree_cpp_v3
   tf2
@@ -206,6 +208,9 @@ list(APPEND plugin_libs nav2_goal_checker_selector_bt_node)
 
 add_library(nav2_goal_updated_controller_bt_node SHARED plugins/decorator/goal_updated_controller.cpp)
 list(APPEND plugin_libs nav2_goal_updated_controller_bt_node)
+
+add_library(nav2_compute_path_to_pose_service_bt_node SHARED plugins/action/compute_path_to_pose_service.cpp)
+list(APPEND plugin_libs nav2_compute_path_to_pose_service_bt_node)
 
 foreach(bt_plugin ${plugin_libs})
   ament_target_dependencies(${bt_plugin} ${dependencies})
