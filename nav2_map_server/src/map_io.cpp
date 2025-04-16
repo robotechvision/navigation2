@@ -508,14 +508,19 @@ void tryWriteMapToFile(
     const int file_name_index = mapdatafile.find_last_of("/\\");
     std::string image_name = mapdatafile.substr(file_name_index + 1);
 
+    std::ostringstream map_x, map_y, map_yaw;
+    map_x << std::fixed << std::setprecision(3) << map.info.origin.position.x;
+    map_y << std::fixed << std::setprecision(3) << map.info.origin.position.y;
+    map_yaw << std::fixed << std::setprecision(3) << yaw;
+
     YAML::Emitter e;
     e << YAML::Precision(3);
     e << YAML::BeginMap;
     e << YAML::Key << "image" << YAML::Value << image_name;
     e << YAML::Key << "mode" << YAML::Value << map_mode_to_string(save_parameters.mode);
     e << YAML::Key << "resolution" << YAML::Value << map.info.resolution;
-    e << YAML::Key << "origin" << YAML::Flow << YAML::BeginSeq << map.info.origin.position.x <<
-      map.info.origin.position.y << yaw << YAML::EndSeq;
+    e << YAML::Key << "origin" << YAML::Flow << YAML::BeginSeq 
+      << map_x.str() << map_y.str() << map_yaw.str() << YAML::EndSeq;
     e << YAML::Key << "negate" << YAML::Value << 0;
     e << YAML::Key << "occupied_thresh" << YAML::Value << save_parameters.occupied_thresh;
     e << YAML::Key << "free_thresh" << YAML::Value << save_parameters.free_thresh;
