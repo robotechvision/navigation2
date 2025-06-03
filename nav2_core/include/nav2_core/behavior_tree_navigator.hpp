@@ -152,7 +152,7 @@ public:
 /**
  * @class BehaviorTreeNavigator
  * @brief Navigator interface that acts as a base class for all BT-based Navigator action's plugins
- * All methods from NavigatorBase are marked as final so they may not be overrided by derived
+ * All methods from NavigatorBase are marked as final so they may not be overridden by derived
  * methods - instead, users should use the appropriate APIs provided after BT Action handling.
  */
 template<class ActionT>
@@ -220,10 +220,10 @@ public:
     }
 
     BT::Blackboard::Ptr blackboard = bt_action_server_->getBlackboard();
-    blackboard->set<std::shared_ptr<tf2_ros::Buffer>>("tf_buffer", feedback_utils.tf);  // NOLINT
-    blackboard->set<bool>("initial_pose_received", false);  // NOLINT
-    blackboard->set<int>("number_recoveries", 0);  // NOLINT
-    blackboard->set<std::shared_ptr<nav2_util::OdomSmoother>>("odom_smoother", odom_smoother);  // NOLINT
+    blackboard->set("tf_buffer", feedback_utils.tf);  // NOLINT
+    blackboard->set("initial_pose_received", false);  // NOLINT
+    blackboard->set("number_recoveries", 0);  // NOLINT
+    blackboard->set("odom_smoother", odom_smoother);  // NOLINT
 
     return configure(parent_node, odom_smoother) && ok;
   }

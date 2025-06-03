@@ -1,4 +1,5 @@
 // Copyright (c) 2022 Samsung Research America, @artofnothingness Alexey Budyakov
+// Copyright (c) 2023 Open Navigation LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,6 +46,7 @@ protected:
   unsigned int power_{0};
   float weight_{0};
   float threshold_to_consider_{0};
+  bool enforce_path_inversion_{false};
 };
 
 }  // namespace mppi::critics

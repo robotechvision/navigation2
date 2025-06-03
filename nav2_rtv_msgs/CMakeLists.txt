@@ -16,6 +16,8 @@ nav2_package()
 add_compile_options(-Wno-error=deprecated)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/Trajectory.msg"
+  "msg/TrajectoryPoint.msg"
   "srv/ComputePathToPose.srv"
   DEPENDENCIES builtin_interfaces geometry_msgs std_msgs action_msgs nav_msgs
 )

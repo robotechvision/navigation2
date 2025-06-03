@@ -1,4 +1,5 @@
 // Copyright (c) 2022 Samsung Research America, @artofnothingness Alexey Budyakov
+// Copyright (c) 2023 Open Navigation LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,13 +18,17 @@
 namespace mppi::critics
 {
 
+
 void GoalCritic::initialize()
 {
+  auto getParentParam = parameters_handler_->getParamGetter(parent_name_);
+  getParentParam(enforce_path_inversion_, "enforce_path_inversion", false);
+
   auto getParam = parameters_handler_->getParamGetter(name_);
 
   getParam(power_, "cost_power", 1);
-  getParam(weight_, "cost_weight", 5.0);
-  getParam(threshold_to_consider_, "threshold_to_consider", 1.0);
+  getParam(weight_, "cost_weight", 5.0f);
+  getParam(threshold_to_consider_, "threshold_to_consider", 1.4f);
 
   RCLCPP_INFO(
     logger_, "GoalCritic instantiated with %d power and %f weight.",
@@ -36,25 +41,27 @@ void GoalCritic::score(CriticData & data)
     return;
   }
 
+  geometry_msgs::msg::Pose goal = utils::getCriticGoal(data, enforce_path_inversion_);
+
   if (!utils::withinPositionGoalTolerance(
-      threshold_to_consider_, data.state.pose.pose, data.path))
+      threshold_to_consider_, data.state.pose.pose, goal))
   {
     return;
   }
 
-  const auto goal_idx = data.path.x.shape(0) - 1;
+  auto goal_x = goal.position.x;
+  auto goal_y = goal.position.y;
 
-  const auto goal_x = data.path.x(goal_idx);
-  const auto goal_y = data.path.y(goal_idx);
+  const auto delta_x = data.trajectories.x - goal_x;
+  const auto delta_y = data.trajectories.y - goal_y;
 
-  const auto last_x = xt::view(data.trajectories.x, xt::all(), -1);
-  const auto last_y = xt::view(data.trajectories.y, xt::all(), -1);
-
-  auto dists = xt::sqrt(
-    xt::pow(last_x - goal_x, 2) +
-    xt::pow(last_y - goal_y, 2));
-
-  data.costs += xt::pow(std::move(dists) * weight_, power_);
+  if(power_ > 1u) {
+    data.costs += (((delta_x.square() + delta_y.square()).sqrt()).rowwise().mean() *
+      weight_).pow(power_);
+  } else {
+    data.costs += (((delta_x.square() + delta_y.square()).sqrt()).rowwise().mean() *
+      weight_).eval();
+  }
 }
 
 }  // namespace mppi::critics
