@@ -28,11 +28,11 @@ nav2_package()
 
 include(CheckCXXCompilerFlag)
 
-check_cxx_compiler_flag("-mfma" COMPILER_SUPPORTS_FMA)
-
-if(COMPILER_SUPPORTS_FMA)
-  add_compile_options(-mfma)
-endif()
+#check_cxx_compiler_flag("-mfma" COMPILER_SUPPORTS_FMA)
+#
+#if(COMPILER_SUPPORTS_FMA)
+#  add_compile_options(-mfma)
+#endif()
 
 # If building one the same hardware to be deployed on, try `-march=native`!
 
