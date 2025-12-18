@@ -36,6 +36,15 @@ ParametersHandler::~ParametersHandler()
   on_set_param_handler_.reset();
 }
 
+ParametersHandler::~ParametersHandler()
+{
+  auto node = node_.lock();
+  if (on_set_param_handler_ && node) {
+    node->remove_on_set_parameters_callback(on_set_param_handler_.get());
+  }
+  on_set_param_handler_.reset();
+}
+
 void ParametersHandler::start()
 {
   auto node = node_.lock();

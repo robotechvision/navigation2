@@ -18,6 +18,7 @@
 #include <string>
 #include <memory>
 
+#include "behaviortree_cpp/json_export.h"
 #include "nav2_msgs/action/follow_path.hpp"
 #include "nav2_behavior_tree/bt_action_node.hpp"
 
@@ -31,7 +32,6 @@ class FollowPathAction : public BtActionNode<nav2_msgs::action::FollowPath>
 {
   using Action = nav2_msgs::action::FollowPath;
   using ActionResult = Action::Result;
-  using ActionGoal = Action::Goal;
 
 public:
   /**
@@ -79,6 +79,9 @@ public:
    */
   static BT::PortsList providedPorts()
   {
+    // Register JSON definitions for the types used in the ports
+    BT::RegisterJsonDefinition<nav_msgs::msg::Path>();
+
     return providedBasicPorts(
       {
         BT::InputPort<nav_msgs::msg::Path>("path", "Path to follow"),

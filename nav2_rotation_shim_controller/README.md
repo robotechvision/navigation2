@@ -12,6 +12,8 @@ This is useful for situations when working with plugins that are either too spec
 
 As such, this controller will check the rough heading difference with respect to the robot and a newly received path. If within a threshold, it will pass the request onto the controller to execute. If it is outside of the threshold, this controller will rotate the robot towards that path heading. Once it is within the tolerance, it will then pass off control-execution from this rotation shim controller onto the primary controller plugin. At this point, the robot is still going to be rotating, allowing the current plugin to take control for a smooth hand off into path tracking. It is recommended to be more generous than strict in the angular threshold to allow for a smoother transition, but should be tuned for a specific application's desired behaviors.
 
+When the `rotate_to_goal_heading` parameter is set to true, this controller is also able to take back control of the robot when reaching the XY goal tolerance of the goal checker. In this case, the robot will rotate towards the goal heading until the goal checker validate the goal and ends the current navigation task.
+
 The Rotation Shim Controller is suitable for:
 - Robots that can rotate in place, such as differential and omnidirectional robots.
 - Preference to rotate in place rather than 'spiral out' when starting to track a new path that is at a significantly different heading than the robot's current heading.
@@ -23,18 +25,20 @@ This plugin implements the `nav2_core::Controller` interface allowing it to be u
   <img src="https://user-images.githubusercontent.com/14944147/144323291-29e24521-674a-41f5-8a91-732121b26b47.gif">
 </p>
 
-See its [Configuration Guide Page](https://navigation.ros.org/configuration/packages/configuring-rotation-shim-controller.html) for additional parameter descriptions.
+See its [Configuration Guide Page](https://docs.nav2.org/configuration/packages/configuring-rotation-shim-controller.html) for additional parameter descriptions.
 
 ## Configuration
 
 | Parameter | Description | 
 |-----|----|
-| `angular_dist_threshold` | Maximum angular distance, in radians, away from the path heading to trigger rotation until within. | 
-| `forward_sampling_distance` | Forward distance, in meters, along path to select a sampling point to use to approximate path heading | 
-| `rotate_to_heading_angular_vel` | Angular rotational velocity, in rad/s, to rotate to the path heading | 
-| `primary_controller` | Internal controller plugin to use for actual control behavior after rotating to heading | 
-| `max_angular_accel` | Maximum angular acceleration for rotation to heading | 
-| `simulate_ahead_time` | Time in seconds to forward simulate a rotation command to check for collisions. If a collision is found, forwards control back to the primary controller plugin. | 
+| `angular_dist_threshold` | Maximum angular distance, in radians, away from the path heading to trigger rotation until within. |
+| `forward_sampling_distance` | Forward distance, in meters, along path to select a sampling point to use to approximate path heading |
+| `rotate_to_heading_angular_vel` | Angular rotational velocity, in rad/s, to rotate to the path heading |
+| `primary_controller` | Internal controller plugin to use for actual control behavior after rotating to heading |
+| `max_angular_accel` | Maximum angular acceleration for rotation to heading |
+| `simulate_ahead_time` | Time in seconds to forward simulate a rotation command to check for collisions. If a collision is found, forwards control back to the primary controller plugin. |
+| `rotate_to_goal_heading` | If true, the rotationShimController will take back control of the robot when in XY tolerance of the goal and start rotating to the goal heading |
+| `use_path_orientations` | If true, the controller will use the orientations of the path points to compute the heading of the path instead of computing the heading from the path points. If true, the controller will use the orientations of the path points to compute the heading of the path instead of computing the heading from the path points. Use for for feasible planners like the Smac Planner which generate feasible paths with orientations for forward and reverse motion. |
 
 Example fully-described XML with default parameter values:
 
@@ -66,6 +70,8 @@ controller_server:
       rotate_to_heading_angular_vel: 1.8
       max_angular_accel: 3.2
       simulate_ahead_time: 1.0
+      rotate_to_goal_heading: false
+      use_path_orientations: false
 
       # DWB parameters
       ...

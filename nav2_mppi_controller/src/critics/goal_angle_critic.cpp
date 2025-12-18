@@ -36,26 +36,21 @@ void GoalAngleCritic::initialize()
 
 void GoalAngleCritic::score(CriticData & data)
 {
-  if (!enabled_) {
-    return;
-  }
-
-  geometry_msgs::msg::Pose goal = utils::getCriticGoal(data, enforce_path_inversion_);
-
-  if (!utils::withinPositionGoalTolerance(
-      threshold_to_consider_, data.state.pose.pose, goal))
+  if (!enabled_ || !utils::withinPositionGoalTolerance(
+      threshold_to_consider_, data.state.pose.pose, data.goal))
   {
     return;
   }
 
   double goal_yaw = tf2::getYaw(goal.orientation);
 
-  if(power_ > 1u) {
-    data.costs += (((utils::shortest_angular_distance(data.trajectories.yaws, goal_yaw).abs()).
-      rowwise().mean()) * weight_).pow(power_).eval();
+  if (power_ > 1u) {
+    data.costs += xt::pow(
+      xt::mean(xt::fabs(utils::shortest_angular_distance(data.trajectories.yaws, goal_yaw)), {1}) *
+      weight_, power_);
   } else {
-    data.costs += (((utils::shortest_angular_distance(data.trajectories.yaws, goal_yaw).abs()).
-      rowwise().mean()) * weight_).eval();
+    data.costs += xt::mean(
+      xt::fabs(utils::shortest_angular_distance(data.trajectories.yaws, goal_yaw)), {1}) * weight_;
   }
 }
 

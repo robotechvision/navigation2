@@ -23,9 +23,6 @@ namespace mppi::critics
 
 void ObstaclesCritic::initialize()
 {
-  auto getParentParam = parameters_handler_->getParamGetter(parent_name_);
-  getParentParam(enforce_path_inversion_, "enforce_path_inversion1", false);
-
   auto getParam = parameters_handler_->getParamGetter(name_);
   getParam(consider_footprint_, "consider_footprint", false);
   getParam(power_, "cost_power", 1);
@@ -80,29 +77,22 @@ float ObstaclesCritic::findCircumscribedCost(
   }
 
   // check if the costmap has an inflation layer
-  bool inflation_layer_found = false;
-  for (auto layer = costmap->getLayeredCostmap()->getPlugins()->begin();
-       layer != costmap->getLayeredCostmap()->getPlugins()->end();
-       ++layer) {
-    auto inflation_layer = std::dynamic_pointer_cast<nav2_costmap_2d::InflationLayer>(*layer);
-    if (!inflation_layer) {
-      continue;
-    }
-    inflation_layer_found = true;
-
+  const auto inflation_layer = nav2_costmap_2d::InflationLayer::getInflationLayer(
+    costmap,
+    inflation_layer_name_);
+  if (inflation_layer != nullptr) {
     const double resolution = costmap->getCostmap()->getResolution();
     result = inflation_layer->computeCost(circum_radius / resolution);
     inflation_scale_factor_ = static_cast<float>(inflation_layer->getCostScalingFactor());
     inflation_radius_ = static_cast<float>(inflation_layer->getInflationRadius());
-  }
-  if (!inflation_layer_found) {
+  } else {
     RCLCPP_WARN(
-        logger_,
-        "No inflation layer found in costmap configuration. "
-        "If this is an SE2-collision checking plugin, it cannot use costmap potential "
-        "field to speed up collision checking by only checking the full footprint "
-        "when robot is within possibly-inscribed radius of an obstacle. This may "
-        "significantly slow down planning times and not avoid anything but absolute collisions!");
+      logger_,
+      "No inflation layer found in costmap configuration. "
+      "If this is an SE2-collision checking plugin, it cannot use costmap potential "
+      "field to speed up collision checking by only checking the full footprint "
+      "when robot is within possibly-inscribed radius of an obstacle. This may "
+      "significantly slow down planning times and not avoid anything but absolute collisions!");
   }
 
   circumscribed_radius_ = static_cast<float>(circum_radius);
@@ -128,6 +118,7 @@ float ObstaclesCritic::distanceToObstacle(const CollisionCost & cost)
 
 void ObstaclesCritic::score(CriticData & data)
 {
+  using xt::evaluation_strategy::immediate;
   if (!enabled_) {
     return;
   }
@@ -137,30 +128,26 @@ void ObstaclesCritic::score(CriticData & data)
     possible_collision_cost_ = findCircumscribedCost(costmap_ros_);
   }
 
-  geometry_msgs::msg::Pose goal = utils::getCriticGoal(data, enforce_path_inversion_);
-
   // If near the goal, don't apply the preferential term since the goal is near obstacles
   bool near_goal = false;
-  if (utils::withinPositionGoalTolerance(near_goal_distance_, data.state.pose.pose, goal)) {
+  if (utils::withinPositionGoalTolerance(near_goal_distance_, data.state.pose.pose, data.goal)) {
     near_goal = true;
   }
 
-  Eigen::ArrayXf raw_cost = Eigen::ArrayXf::Zero(data.costs.size());
-  Eigen::ArrayXf repulsive_cost = Eigen::ArrayXf::Zero(data.costs.size());
+  auto && raw_cost = xt::xtensor<float, 1>::from_shape({data.costs.shape(0)});
+  auto && repulsive_cost = xt::xtensor<float, 1>::from_shape({data.costs.shape(0)});
 
-  const unsigned int traj_len = data.trajectories.x.cols();
-  const unsigned int batch_size = data.trajectories.x.rows();
+  const size_t traj_len = data.trajectories.x.shape(1);
   bool all_trajectories_collide = true;
-
-  for(unsigned int i = 0; i != batch_size; i++) {
+  for (size_t i = 0; i < data.trajectories.x.shape(0); ++i) {
     bool trajectory_collide = false;
     float traj_cost = 0.0f;
     const auto & traj = data.trajectories;
     CollisionCost pose_cost;
-    raw_cost(i) = 0.0f;
-    repulsive_cost(i) = 0.0f;
+    raw_cost[i] = 0.0f;
+    repulsive_cost[i] = 0.0f;
 
-    for(unsigned int j = 0; j != traj_len; j++) {
+    for (size_t j = 0; j < traj_len; j++) {
       pose_cost = costAtPose(traj.x(i, j), traj.y(i, j), traj.yaws(i, j));
       if (pose_cost.cost < 1.0f) {continue;}  // In free space
 
@@ -188,18 +175,22 @@ void ObstaclesCritic::score(CriticData & data)
     }
 
     if (!trajectory_collide) {all_trajectories_collide = false;}
-    raw_cost(i) = trajectory_collide ? collision_cost_ : traj_cost;
+    raw_cost[i] = trajectory_collide ? collision_cost_ : traj_cost;
   }
 
   // Normalize repulsive cost by trajectory length & lowest score to not overweight importance
   // This is a preferential cost, not collision cost, to be tuned relative to desired behaviors
-  auto repulsive_cost_normalized = (repulsive_cost - repulsive_cost.minCoeff()) / traj_len;
+  auto && repulsive_cost_normalized =
+    (repulsive_cost - xt::amin(repulsive_cost, immediate)) / traj_len;
 
   if (power_ > 1u) {
-    data.costs +=
-      ((critical_weight_ * raw_cost) + (repulsion_weight_ * repulsive_cost_normalized)).pow(power_);
+    data.costs += xt::pow(
+      (critical_weight_ * raw_cost) +
+      (repulsion_weight_ * repulsive_cost_normalized),
+      power_);
   } else {
-    data.costs += (critical_weight_ * raw_cost) + (repulsion_weight_ * repulsive_cost_normalized);
+    data.costs += (critical_weight_ * raw_cost) +
+      (repulsion_weight_ * repulsive_cost_normalized);
   }
 
   data.fail_flag = all_trajectories_collide;

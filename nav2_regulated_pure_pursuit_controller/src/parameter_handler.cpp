@@ -32,6 +32,7 @@ ParameterHandler::ParameterHandler(
   std::string & plugin_name, rclcpp::Logger & logger,
   const double costmap_size_x)
 {
+  node_ = node;
   plugin_name_ = plugin_name;
   logger_ = logger;
 
@@ -86,16 +87,22 @@ ParameterHandler::ParameterHandler(
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".max_angular_accel", rclcpp::ParameterValue(3.2));
   declare_parameter_if_not_declared(
+    node, plugin_name_ + ".use_cancel_deceleration", rclcpp::ParameterValue(false));
+  declare_parameter_if_not_declared(
+    node, plugin_name_ + ".cancel_deceleration", rclcpp::ParameterValue(3.2));
+  declare_parameter_if_not_declared(
     node, plugin_name_ + ".allow_reversing", rclcpp::ParameterValue(false));
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".max_robot_pose_search_dist",
     rclcpp::ParameterValue(costmap_size_x / 2.0));
   declare_parameter_if_not_declared(
-    node, plugin_name_ + ".use_interpolation",
-    rclcpp::ParameterValue(true));
+    node, plugin_name_ + ".interpolate_curvature_after_goal",
+    rclcpp::ParameterValue(false));
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".use_collision_detection",
     rclcpp::ParameterValue(true));
+  declare_parameter_if_not_declared(
+      node, plugin_name_ + ".stateful", rclcpp::ParameterValue(true));
 
   node->get_parameter(plugin_name_ + ".desired_linear_vel", params_.desired_linear_vel);
   params_.base_desired_linear_vel = params_.desired_linear_vel;
@@ -151,6 +158,8 @@ ParameterHandler::ParameterHandler(
   node->get_parameter(
     plugin_name_ + ".rotate_to_heading_min_angle", params_.rotate_to_heading_min_angle);
   node->get_parameter(plugin_name_ + ".max_angular_accel", params_.max_angular_accel);
+  node->get_parameter(plugin_name_ + ".use_cancel_deceleration", params_.use_cancel_deceleration);
+  node->get_parameter(plugin_name_ + ".cancel_deceleration", params_.cancel_deceleration);
   node->get_parameter(plugin_name_ + ".allow_reversing", params_.allow_reversing);
   node->get_parameter(
     plugin_name_ + ".max_robot_pose_search_dist",
@@ -163,11 +172,18 @@ ParameterHandler::ParameterHandler(
   }
 
   node->get_parameter(
-    plugin_name_ + ".use_interpolation",
-    params_.use_interpolation);
+    plugin_name_ + ".interpolate_curvature_after_goal",
+    params_.interpolate_curvature_after_goal);
+  if (!params_.use_fixed_curvature_lookahead && params_.interpolate_curvature_after_goal) {
+    RCLCPP_WARN(
+      logger_, "For interpolate_curvature_after_goal to be set to true, "
+      "use_fixed_curvature_lookahead should be true, it is currently set to false. Disabling.");
+    params_.interpolate_curvature_after_goal = false;
+  }
   node->get_parameter(
     plugin_name_ + ".use_collision_detection",
     params_.use_collision_detection);
+  node->get_parameter(plugin_name_ + ".stateful", params_.stateful);
 
   if (params_.inflation_cost_scaling_factor <= 0.0) {
     RCLCPP_WARN(
@@ -176,20 +192,19 @@ ParameterHandler::ParameterHandler(
     params_.use_cost_regulated_linear_velocity_scaling = false;
   }
 
-  /** Possible to drive in reverse direction if and only if
-   "use_rotate_to_heading" parameter is set to false **/
-
-  if (params_.use_rotate_to_heading && params_.allow_reversing) {
-    RCLCPP_WARN(
-      logger_, "Disabling reversing. Both use_rotate_to_heading and allow_reversing "
-      "parameter cannot be set to true. By default setting use_rotate_to_heading true");
-    params_.allow_reversing = false;
-  }
-
   dyn_params_handler_ = node->add_on_set_parameters_callback(
     std::bind(
       &ParameterHandler::dynamicParametersCallback,
       this, std::placeholders::_1));
+}
+
+ParameterHandler::~ParameterHandler()
+{
+  auto node = node_.lock();
+  if (dyn_params_handler_ && node) {
+    node->remove_on_set_parameters_callback(dyn_params_handler_.get());
+  }
+  dyn_params_handler_.reset();
 }
 
 rcl_interfaces::msg::SetParametersResult
@@ -241,8 +256,14 @@ ParameterHandler::dynamicParametersCallback(
         params_.regulated_linear_scaling_min_speed = parameter.as_double();
       } else if (name == plugin_name_ + ".max_angular_accel") {
         params_.max_angular_accel = parameter.as_double();
+      } else if (name == plugin_name_ + ".cancel_deceleration") {
+        params_.cancel_deceleration = parameter.as_double();
       } else if (name == plugin_name_ + ".rotate_to_heading_min_angle") {
         params_.rotate_to_heading_min_angle = parameter.as_double();
+      } else if (name == plugin_name_ + ".transform_tolerance") {
+        params_.transform_tolerance = parameter.as_double();
+      } else if (name == plugin_name_ + ".max_robot_pose_search_dist") {
+        params_.max_robot_pose_search_dist = parameter.as_double();
       }
     } else if (type == ParameterType::PARAMETER_BOOL) {
       if (name == plugin_name_ + ".use_velocity_scaled_lookahead_dist") {
@@ -255,14 +276,12 @@ ParameterHandler::dynamicParametersCallback(
         params_.use_cost_regulated_linear_velocity_scaling = parameter.as_bool();
       } else if (name == plugin_name_ + ".use_collision_detection") {
         params_.use_collision_detection = parameter.as_bool();
+      } else if (name == plugin_name_ + ".stateful") {
+        params_.stateful = parameter.as_bool();
       } else if (name == plugin_name_ + ".use_rotate_to_heading") {
-        if (parameter.as_bool() && params_.allow_reversing) {
-          RCLCPP_WARN(
-            logger_, "Both use_rotate_to_heading and allow_reversing "
-            "parameter cannot be set to true. Rejecting parameter update.");
-          continue;
-        }
         params_.use_rotate_to_heading = parameter.as_bool();
+      } else if (name == plugin_name_ + ".use_cancel_deceleration") {
+        params_.use_cancel_deceleration = parameter.as_bool();
       } else if (name == plugin_name_ + ".allow_reversing") {
         if (params_.use_rotate_to_heading && parameter.as_bool()) {
           RCLCPP_WARN(
@@ -271,6 +290,8 @@ ParameterHandler::dynamicParametersCallback(
           continue;
         }
         params_.allow_reversing = parameter.as_bool();
+      } else if (name == plugin_name_ + ".interpolate_curvature_after_goal") {
+        params_.interpolate_curvature_after_goal = parameter.as_bool();
       }
     }
   }

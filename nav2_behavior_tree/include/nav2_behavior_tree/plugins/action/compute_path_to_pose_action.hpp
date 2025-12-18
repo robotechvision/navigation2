@@ -17,6 +17,7 @@
 
 #include <string>
 
+#include "behaviortree_cpp/json_export.h"
 #include "nav2_msgs/action/compute_path_to_pose.hpp"
 #include "nav_msgs/msg/path.h"
 #include "nav2_behavior_tree/bt_action_node.hpp"
@@ -31,7 +32,6 @@ class ComputePathToPoseAction : public BtActionNode<nav2_msgs::action::ComputePa
 {
   using Action = nav2_msgs::action::ComputePathToPose;
   using ActionResult = Action::Result;
-  using ActionGoal = Action::Goal;
 
 public:
   /**
@@ -76,11 +76,19 @@ public:
    */
   static BT::PortsList providedPorts()
   {
+    // Register JSON definitions for the types used in the ports
+    BT::RegisterJsonDefinition<nav_msgs::msg::Path>();
+    BT::RegisterJsonDefinition<geometry_msgs::msg::PoseStamped>();
+
     return providedBasicPorts(
       {
         BT::InputPort<geometry_msgs::msg::PoseStamped>("goal", "Destination to plan to"),
         BT::InputPort<geometry_msgs::msg::PoseStamped>(
-          "start", "Start pose of the path if overriding current robot pose"),
+          "start",
+          "Used as the planner start pose instead of the current robot pose, if use_start is"
+                   " not false (i.e. not provided or set to true)"),
+        BT::InputPort<bool>(
+          "use_start", "For using or not using (i.e. ignoring) the provided start pose"),
         BT::InputPort<std::string>(
           "planner_id", "",
           "Mapped name to the planner plugin type to use"),

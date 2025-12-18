@@ -127,7 +127,7 @@ geometry_msgs::msg::TwistStamped MPPIController::computeVelocityCommands(
   }
 
   if (visualize_) {
-    visualize(std::move(transformed_plan), cmd.header.stamp, optimal_trajectory);
+    visualize(std::move(transformed_plan), cmd.header.stamp);
   }
 
   return cmd;
@@ -135,16 +135,10 @@ geometry_msgs::msg::TwistStamped MPPIController::computeVelocityCommands(
 
 void MPPIController::visualize(
   nav_msgs::msg::Path transformed_plan,
-  const builtin_interfaces::msg::Time & cmd_stamp,
-  const Eigen::ArrayXXf & optimal_trajectory)
+  const builtin_interfaces::msg::Time & cmd_stamp)
 {
   trajectory_visualizer_.add(optimizer_.getGeneratedTrajectories(), "Candidate Trajectories");
-  if (optimal_trajectory.size() > 0) {
-    trajectory_visualizer_.add(optimal_trajectory, "Optimal Trajectory", cmd_stamp);
-  } else {
-    trajectory_visualizer_.add(
-      optimizer_.getOptimizedTrajectory(), "Optimal Trajectory", cmd_stamp);
-  }
+  trajectory_visualizer_.add(optimizer_.getOptimizedTrajectory(), "Optimal Trajectory", cmd_stamp);
   trajectory_visualizer_.visualize(std::move(transformed_plan));
 }
 

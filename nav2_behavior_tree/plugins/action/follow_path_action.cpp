@@ -38,7 +38,7 @@ void FollowPathAction::on_tick()
 
 BT::NodeStatus FollowPathAction::on_success()
 {
-  setOutput("error_code_id", ActionGoal::NONE);
+  setOutput("error_code_id", ActionResult::NONE);
   return BT::NodeStatus::SUCCESS;
 }
 
@@ -51,7 +51,7 @@ BT::NodeStatus FollowPathAction::on_aborted()
 BT::NodeStatus FollowPathAction::on_cancelled()
 {
   // Set empty error code, action was cancelled
-  setOutput("error_code_id", ActionGoal::NONE);
+  setOutput("error_code_id", ActionResult::NONE);
   return BT::NodeStatus::SUCCESS;
 }
 
@@ -63,7 +63,7 @@ void FollowPathAction::on_wait_for_result(
   getInput("path", new_path);
 
   // Check if it is not same with the current one
-  if (goal_.path != new_path) {
+  if (goal_.path != new_path && new_path != nav_msgs::msg::Path()) {
     // the action server on the next loop iteration
     goal_.path = new_path;
     goal_updated_ = true;
@@ -96,7 +96,7 @@ void FollowPathAction::on_wait_for_result(
 
 }  // namespace nav2_behavior_tree
 
-#include "behaviortree_cpp_v3/bt_factory.h"
+#include "behaviortree_cpp/bt_factory.h"
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

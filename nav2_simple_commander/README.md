@@ -10,9 +10,11 @@ This was built by [Steve Macenski](https://www.linkedin.com/in/steve-macenski-41
 
 ## API
 
-See its [API Guide Page](https://navigation.ros.org/commander_api/index.html) for additional parameter descriptions.
+See its [API Guide Page](https://docs.nav2.org/commander_api/index.html) for additional parameter descriptions.
 
 The methods provided by the basic navigator are shown below, with inputs and expected returns. If a server fails, it may throw an exception or return a `None` object, so please be sure to properly wrap your navigation calls in try/catch and check results for `None` type.
+
+New as of September 2023: the simple navigator constructor will accept a `namespace` field to support multi-robot applications or namespaced Nav2 launches.
 
 | Robot Navigator Method            | Description                                                                |
 | --------------------------------- | -------------------------------------------------------------------------- |

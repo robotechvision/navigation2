@@ -88,15 +88,11 @@ public:
   bool on_cleanup();
 
   /**
-   * @brief Enable (or disable) Groot monitoring of BT
-   * @param Enable Groot monitoring
-   * @param Publisher port
-   * @param Server port
+   * @brief Enable (or disable) Groot2 monitoring of BT
+   * @param enable Groot2 monitoring
+   * @param server_port Groot2 Server port, first of the pair (server_port, publisher_port)
    */
-  void setGrootMonitoring(
-    const bool enable,
-    const unsigned publisher_port,
-    const unsigned server_port);
+  void setGrootMonitoring(const bool enable, const unsigned server_port);
 
   /**
    * @brief Replace current BT with another one
@@ -188,10 +184,11 @@ public:
   /**
    * @brief Function to halt the current tree. It will interrupt the execution of RUNNING nodes
    * by calling their halt() implementation (only for Async nodes that may return RUNNING)
+   * This should already done for all the exit states of the action but preemption
    */
   void haltTree()
   {
-    tree_.rootNode()->halt();
+    tree_.haltTree();
   }
 
 protected:
@@ -206,6 +203,11 @@ protected:
    * @param result the action server result to be updated
    */
   void populateErrorCode(typename std::shared_ptr<typename ActionT::Result> result);
+
+  /**
+   * @brief Setting BT error codes to success. Used to clean blackboard between different BT runs
+   */
+  void cleanErrorCodes();
 
   // Action name
   std::string action_name_;
@@ -253,9 +255,14 @@ protected:
   // Default timeout value while waiting for response from a server
   std::chrono::milliseconds default_server_timeout_;
 
-  // Parameters for Groot monitoring
-  bool enable_groot_monitoring_ = true;
-  int groot_publisher_port_ = 1666;
+  // The timeout value for waiting for a service to response
+  std::chrono::milliseconds wait_for_service_timeout_;
+
+  // should the BT be reloaded even if the same xml filename is requested?
+  bool always_reload_bt_xml_ = false;
+
+  // Parameters for Groot2 monitoring
+  bool enable_groot_monitoring_ = false;
   int groot_server_port_ = 1667;
 
   // User-provided callbacks

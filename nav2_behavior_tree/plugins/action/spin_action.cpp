@@ -23,7 +23,9 @@ SpinAction::SpinAction(
   const std::string & xml_tag_name,
   const std::string & action_name,
   const BT::NodeConfiguration & conf)
-: BtActionNode<nav2_msgs::action::Spin>(xml_tag_name, action_name, conf)
+: BtActionNode<nav2_msgs::action::Spin>(xml_tag_name, action_name, conf) {}
+
+void SpinAction::initialize()
 {
   double dist;
   getInput("spin_dist", dist);
@@ -36,6 +38,10 @@ SpinAction::SpinAction(
 
 void SpinAction::on_tick()
 {
+  if (!BT::isStatusActive(status())) {
+    initialize();
+  }
+
   if (is_recovery_) {
     increment_recovery_count();
   }
@@ -43,7 +49,7 @@ void SpinAction::on_tick()
 
 BT::NodeStatus SpinAction::on_success()
 {
-  setOutput("error_code_id", ActionGoal::NONE);
+  setOutput("error_code_id", ActionResult::NONE);
   return BT::NodeStatus::SUCCESS;
 }
 
@@ -55,13 +61,13 @@ BT::NodeStatus SpinAction::on_aborted()
 
 BT::NodeStatus SpinAction::on_cancelled()
 {
-  setOutput("error_code_id", ActionGoal::NONE);
+  setOutput("error_code_id", ActionResult::NONE);
   return BT::NodeStatus::SUCCESS;
 }
 
 }  // namespace nav2_behavior_tree
 
-#include "behaviortree_cpp_v3/bt_factory.h"
+#include "behaviortree_cpp/bt_factory.h"
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =

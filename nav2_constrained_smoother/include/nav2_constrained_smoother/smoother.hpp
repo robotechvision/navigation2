@@ -194,8 +194,8 @@ private:
       // update cusp zone costmap weights
       if (is_cusp) {
         double len_to_cusp = current_segment_len;
-        for (int j = potential_cusp_funcs.size() - 1; j >= 0; j--) {
-          auto & f = potential_cusp_funcs[j];
+        for (int i_cusp = potential_cusp_funcs.size() - 1; i_cusp >= 0; i_cusp--) {
+          auto & f = potential_cusp_funcs[i_cusp];
           double new_weight =
             params.cusp_costmap_weight * (1.0 - len_to_cusp / cusp_half_length) +
             params.costmap_weight * len_to_cusp / cusp_half_length;
@@ -293,7 +293,7 @@ private:
     }
     int last_i = 0;
     int prelast_i = -1;
-    Eigen::Vector2d prelast_dir;
+    Eigen::Vector2d prelast_dir = {0, 0};
     for (int i = 1; i <= static_cast<int>(path_optim.size()); i++) {
       if (i == static_cast<int>(path_optim.size()) || optimized[i]) {
         if (prelast_i != -1) {

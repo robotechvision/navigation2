@@ -19,10 +19,12 @@
 #include <memory>
 #include <chrono>
 
-#include "behaviortree_cpp_v3/action_node.h"
+#include "behaviortree_cpp/action_node.h"
+#include "behaviortree_cpp/json_export.h"
 #include "nav2_util/node_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "nav2_behavior_tree/bt_conversions.hpp"
+#include "nav2_behavior_tree/bt_utils.hpp"
+#include "nav2_behavior_tree/json_utils.hpp"
 
 namespace nav2_behavior_tree
 {
@@ -57,11 +59,14 @@ public:
     callback_group_executor_.add_callback_group(callback_group_, node_->get_node_base_interface());
 
     // Get the required items from the blackboard
-    bt_loop_duration_ =
+    auto bt_loop_duration =
       config().blackboard->template get<std::chrono::milliseconds>("bt_loop_duration");
-    server_timeout_ =
-      config().blackboard->template get<std::chrono::milliseconds>("server_timeout");
-    getInput<std::chrono::milliseconds>("server_timeout", server_timeout_);
+    getInputOrBlackboard("server_timeout", server_timeout_);
+    wait_for_service_timeout_ =
+      config().blackboard->template get<std::chrono::milliseconds>("wait_for_service_timeout");
+
+    // timeout should be less than bt_loop_duration to be able to finish the current tick
+    max_timeout_ = std::chrono::duration_cast<std::chrono::milliseconds>(bt_loop_duration * 0.5);
 
     // Now that we have node_ to use, create the service client for this BT service
     getInput("service_name", service_name_);
@@ -77,15 +82,13 @@ public:
     RCLCPP_DEBUG(
       node_->get_logger(), "Waiting for \"%s\" service",
       service_name_.c_str());
-    if (!service_client_->wait_for_service(1s)) {
+    if (!service_client_->wait_for_service(wait_for_service_timeout_)) {
       RCLCPP_ERROR(
-        node_->get_logger(), "\"%s\" \"%s\" service server not available after waiting for 1 s",
-        service_node_name.c_str(),
-        service_name_.c_str());
+        node_->get_logger(), "\"%s\" service server not available after waiting for %.2fs",
+        service_name_.c_str(), wait_for_service_timeout_.count() / 1000.0);
       throw std::runtime_error(
-              std::string(
-                "Service server %s not available",
-                service_node_name.c_str()));
+              std::string("Service server ") + service_name_ +
+              std::string(" not available"));
     }
 
     RCLCPP_DEBUG(
@@ -137,6 +140,9 @@ public:
       // allowing the user the option to set it in on_tick
       should_send_request_ = true;
 
+      // Clear the input request to make sure we have no leftover from previous calls
+      request_ = std::make_shared<typename ServiceT::Request>();
+
       // user defined callback, may modify "should_send_request_".
       on_tick();
 
@@ -157,7 +163,7 @@ public:
   void halt() override
   {
     request_sent_ = false;
-    setStatus(BT::NodeStatus::IDLE);
+    resetStatus();
   }
 
   /**
@@ -185,13 +191,13 @@ public:
    */
   virtual BT::NodeStatus check_future()
   {
-    auto elapsed = (node_->now() - sent_time_).to_chrono<std::chrono::milliseconds>();
+    auto elapsed = (node_->now() - sent_time_).template to_chrono<std::chrono::milliseconds>();
     auto remaining = server_timeout_ - elapsed;
     bool synchronous = false;
 
     if (remaining > std::chrono::milliseconds(0)) {
       getInput("synchronous", synchronous);
-      auto timeout = (remaining > bt_loop_duration_ && !synchronous) ? bt_loop_duration_ : remaining;
+      auto timeout = (remaining > max_timeout_ && !synchronous) ? max_timeout_ : remaining;
 
       rclcpp::FutureReturnCode rc;
       rc = callback_group_executor_.spin_until_future_complete(future_result_, timeout);
@@ -203,7 +209,7 @@ public:
 
       if (rc == rclcpp::FutureReturnCode::TIMEOUT) {
         on_wait_for_result();
-        elapsed = (node_->now() - sent_time_).to_chrono<std::chrono::milliseconds>();
+        elapsed = (node_->now() - sent_time_).template to_chrono<std::chrono::milliseconds>();
         if (elapsed < server_timeout_) {
           return BT::NodeStatus::RUNNING;
         }
@@ -232,9 +238,9 @@ protected:
   void increment_recovery_count()
   {
     int recovery_count = 0;
-    config().blackboard->template get<int>("number_recoveries", recovery_count);  // NOLINT
+    [[maybe_unused]] auto res = config().blackboard->get("number_recoveries", recovery_count);  // NOLINT
     recovery_count += 1;
-    config().blackboard->template set<int>("number_recoveries", recovery_count);  // NOLINT
+    config().blackboard->set("number_recoveries", recovery_count);  // NOLINT
   }
 
   std::string service_name_, service_node_name_;
@@ -251,7 +257,10 @@ protected:
   std::chrono::milliseconds server_timeout_;
 
   // The timeout value for BT loop execution
-  std::chrono::milliseconds bt_loop_duration_;
+  std::chrono::milliseconds max_timeout_;
+
+  // The timeout value for waiting for a service to response
+  std::chrono::milliseconds wait_for_service_timeout_;
 
   // To track the server response when a new request is sent
   std::shared_future<typename ServiceT::Response::SharedPtr> future_result_;

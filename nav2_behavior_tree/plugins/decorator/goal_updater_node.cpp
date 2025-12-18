@@ -17,7 +17,7 @@
 #include <memory>
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "behaviortree_cpp_v3/decorator_node.h"
+#include "behaviortree_cpp/decorator_node.h"
 
 #include "nav2_behavior_tree/plugins/decorator/goal_updater_node.hpp"
 
@@ -46,9 +46,12 @@ GoalUpdater::GoalUpdater(
   sub_option.callback_group = callback_group_;
   goal_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
     goal_updater_topic,
-    10,
+    rclcpp::SystemDefaultsQoS(),
     std::bind(&GoalUpdater::callback_updated_goal, this, _1),
     sub_option);
+
+  // Spin multiple times due to rclcpp regression in Jazzy requiring a 'warm up' spin
+  callback_group_executor_.spin_all(std::chrono::milliseconds(1));
 }
 
 inline BT::NodeStatus GoalUpdater::tick()
@@ -57,10 +60,19 @@ inline BT::NodeStatus GoalUpdater::tick()
 
   getInput("input_goal", goal);
 
-  callback_group_executor_.spin_some();
+  callback_group_executor_.spin_all(std::chrono::milliseconds(49));
 
-  if (rclcpp::Time(last_goal_received_.header.stamp) > rclcpp::Time(goal.header.stamp)) {
-    goal = last_goal_received_;
+  if (last_goal_received_.header.stamp != rclcpp::Time(0)) {
+    auto last_goal_received_time = rclcpp::Time(last_goal_received_.header.stamp);
+    auto goal_time = rclcpp::Time(goal.header.stamp);
+    if (last_goal_received_time > goal_time) {
+      goal = last_goal_received_;
+    } else {
+      RCLCPP_WARN(
+        node_->get_logger(), "The timestamp of the received goal (%f) is older than the "
+        "current goal (%f). Ignoring the received goal.",
+        last_goal_received_time.seconds(), goal_time.seconds());
+    }
   }
 
   setOutput("output_goal", goal);
@@ -75,7 +87,7 @@ GoalUpdater::callback_updated_goal(const geometry_msgs::msg::PoseStamped::Shared
 
 }  // namespace nav2_behavior_tree
 
-#include "behaviortree_cpp_v3/bt_factory.h"
+#include "behaviortree_cpp/bt_factory.h"
 BT_REGISTER_NODES(factory)
 {
   factory.registerNodeType<nav2_behavior_tree::GoalUpdater>("GoalUpdater");

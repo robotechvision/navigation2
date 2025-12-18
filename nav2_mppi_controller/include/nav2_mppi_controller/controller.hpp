@@ -110,8 +110,7 @@ protected:
     */
   void visualize(
     nav_msgs::msg::Path transformed_plan,
-    const builtin_interfaces::msg::Time & cmd_stamp,
-    const Eigen::ArrayXXf & optimal_trajectory);
+    const builtin_interfaces::msg::Time & cmd_stamp);
 
   std::string name_;
   rclcpp_lifecycle::LifecycleNode::WeakPtr parent_;

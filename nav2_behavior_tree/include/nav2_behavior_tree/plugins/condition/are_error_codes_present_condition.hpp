@@ -21,7 +21,7 @@
 #include <set>
 
 #include "rclcpp/rclcpp.hpp"
-#include "behaviortree_cpp_v3/condition_node.h"
+#include "behaviortree_cpp/condition_node.h"
 
 namespace nav2_behavior_tree
 {
@@ -34,14 +34,19 @@ public:
     const BT::NodeConfiguration & conf)
   : BT::ConditionNode(condition_name, conf)
   {
-    getInput<std::set<unsigned short>>("error_codes_to_check", error_codes_to_check_); //NOLINT
+    std::vector<int> error_codes_to_check_vector;
+    getInput("error_codes_to_check", error_codes_to_check_vector); //NOLINT
+
+    error_codes_to_check_ = std::set<uint16_t>(
+      error_codes_to_check_vector.begin(),
+      error_codes_to_check_vector.end());
   }
 
   AreErrorCodesPresent() = delete;
 
   BT::NodeStatus tick()
   {
-    getInput<unsigned short>("error_code", error_code_);  //NOLINT
+    getInput<uint16_t>("error_code", error_code_);  //NOLINT
 
     if (error_codes_to_check_.find(error_code_) != error_codes_to_check_.end()) {
       return BT::NodeStatus::SUCCESS;
@@ -54,14 +59,14 @@ public:
   {
     return
       {
-        BT::InputPort<unsigned short>("error_code", "The active error codes"), //NOLINT
-        BT::InputPort<std::set<unsigned short>>("error_codes_to_check", "Error codes to check")//NOLINT
+        BT::InputPort<uint16_t>("error_code", "The active error codes"), //NOLINT
+        BT::InputPort<std::vector<int>>("error_codes_to_check", "Error codes to check")//NOLINT
       };
   }
 
 protected:
-  unsigned short error_code_; //NOLINT
-  std::set<unsigned short> error_codes_to_check_; //NOLINT
+  uint16_t error_code_; //NOLINT
+  std::set<uint16_t> error_codes_to_check_; //NOLINT
 };
 
 }  // namespace nav2_behavior_tree

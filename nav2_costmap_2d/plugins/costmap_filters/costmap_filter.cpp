@@ -78,7 +78,7 @@ void CostmapFilter::onInitialize()
     // Get parameters
     node->get_parameter(name_ + "." + "enabled", enabled_);
     filter_info_topic_ = node->get_parameter(name_ + "." + "filter_info_topic").as_string();
-    double transform_tolerance;
+    double transform_tolerance {};
     node->get_parameter(name_ + "." + "transform_tolerance", transform_tolerance);
     transform_tolerance_ = tf2::durationFromSec(transform_tolerance);
 
@@ -218,7 +218,7 @@ unsigned char CostmapFilter::getMaskCost(
 {
   const unsigned int index = my * filter_mask->info.width + mx;
 
-  const char data = filter_mask->data[index];
+  const signed char data = filter_mask->data[index];
   if (data == nav2_util::OCC_GRID_UNKNOWN) {
     return NO_INFORMATION;
   } else {

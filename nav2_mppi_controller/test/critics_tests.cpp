@@ -56,6 +56,20 @@ public:
   }
 };
 
+class PathAngleCriticWrapper : public PathAngleCritic
+{
+public:
+  PathAngleCriticWrapper()
+  : PathAngleCritic()
+  {
+  }
+
+  void setMode(int mode)
+  {
+    mode_ = static_cast<PathAngleMode>(mode);
+  }
+};
+
 TEST(CriticTests, ConstraintsCritic)
 {
   // Standard preamble
@@ -76,7 +90,7 @@ TEST(CriticTests, ConstraintsCritic)
   models::Trajectories generated_trajectories;
   models::Path path;
   geometry_msgs::msg::Pose goal;
-  Eigen::ArrayXf costs = Eigen::ArrayXf::Zero(1000);
+  xt::xtensor<float, 1> costs = xt::zeros<float>({1000});
   float model_dt = 0.1;
   CriticData data =
   {state, generated_trajectories, path, goal, costs, model_dt,
@@ -130,9 +144,8 @@ TEST(CriticTests, ConstraintsCritic)
 TEST(CriticTests, ObstacleCriticMisalignedParams) {
   auto node = std::make_shared<rclcpp_lifecycle::LifecycleNode>("my_node");
   auto costmap_ros = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
-    "dummy_costmap", "", true);
-  std::string name = "test";
-  ParametersHandler param_handler(node, name);
+    "dummy_costmap", "", "dummy_costmap", true);
+  ParametersHandler param_handler(node);
   auto getParam = param_handler.getParamGetter("critic");
   bool consider_footprint;
   getParam(consider_footprint, "consider_footprint", true);
@@ -151,9 +164,8 @@ TEST(CriticTests, ObstacleCriticMisalignedParams) {
 TEST(CriticTests, ObstacleCriticAlignedParams) {
   auto node = std::make_shared<rclcpp_lifecycle::LifecycleNode>("my_node");
   auto costmap_ros = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
-    "dummy_costmap", "", true);
-  std::string name = "test";
-  ParametersHandler param_handler(node, name);
+    "dummy_costmap", "", "dummy_costmap", true);
+  ParametersHandler param_handler(node);
   auto getParam = param_handler.getParamGetter("critic");
   bool consider_footprint;
   getParam(consider_footprint, "consider_footprint", false);
@@ -171,9 +183,8 @@ TEST(CriticTests, CostCriticMisAlignedParams) {
   // Standard preamble
   auto node = std::make_shared<rclcpp_lifecycle::LifecycleNode>("my_node");
   auto costmap_ros = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
-    "dummy_costmap", "", true);
-  std::string name = "test";
-  ParametersHandler param_handler(node, name);
+    "dummy_costmap", "", "dummy_costmap", true);
+  ParametersHandler param_handler(node);
   rclcpp_lifecycle::State lstate;
    auto getParam = param_handler.getParamGetter("critic");
   bool consider_footprint;
@@ -192,9 +203,8 @@ TEST(CriticTests, CostCriticAlignedParams) {
   // Standard preamble
   auto node = std::make_shared<rclcpp_lifecycle::LifecycleNode>("my_node");
   auto costmap_ros = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
-    "dummy_costmap", "", true);
-  std::string name = "test";
-  ParametersHandler param_handler(node, name);
+    "dummy_costmap", "", "dummy_costmap", true);
+  ParametersHandler param_handler(node);
   rclcpp_lifecycle::State lstate;
    auto getParam = param_handler.getParamGetter("critic");
   bool consider_footprint;
@@ -223,8 +233,7 @@ TEST(CriticTests, GoalAngleCritic)
   generated_trajectories.reset(1000, 30);
   models::Path path;
   geometry_msgs::msg::Pose goal;
-  path.reset(10);
-  Eigen::ArrayXf costs = Eigen::ArrayXf::Zero(1000);
+  xt::xtensor<float, 1> costs = xt::zeros<float>({1000});
   float model_dt = 0.1;
   CriticData data =
   {state, generated_trajectories, path, goal, costs, model_dt,
@@ -246,11 +255,6 @@ TEST(CriticTests, GoalAngleCritic)
   path.y(9) = 0.0;
   path.yaws(9) = 3.14;
   goal.position.x = 10.0;
-  goal.position.y = 0.0;
-  goal.orientation.x = 0.0;
-  goal.orientation.y = 0.0;
-  goal.orientation.z = 1.0;
-  goal.orientation.w = 0.0;
   critic.score(data);
   EXPECT_NEAR(costs.sum(), 0, 1e-6);
 
@@ -283,8 +287,7 @@ TEST(CriticTests, GoalCritic)
   generated_trajectories.reset(1000, 30);
   models::Path path;
   geometry_msgs::msg::Pose goal;
-  path.reset(10);
-  Eigen::ArrayXf costs = Eigen::ArrayXf::Zero(1000);
+  xt::xtensor<float, 1> costs = xt::zeros<float>({1000});
   float model_dt = 0.1;
   CriticData data =
   {state, generated_trajectories, path, goal, costs, model_dt,
@@ -337,8 +340,7 @@ TEST(CriticTests, PathAngleCritic)
   generated_trajectories.reset(1000, 30);
   models::Path path;
   geometry_msgs::msg::Pose goal;
-  path.reset(10);
-  Eigen::ArrayXf costs = Eigen::ArrayXf::Zero(1000);
+  xt::xtensor<float, 1> costs = xt::zeros<float>({1000});
   float model_dt = 0.1;
   CriticData data =
   {state, generated_trajectories, path, goal, costs, model_dt,
@@ -376,54 +378,54 @@ TEST(CriticTests, PathAngleCritic)
   path.x(6) = -1.0;  // angle between path point and pose > max_angle_to_furthest_
   path.y(6) = 4.0;
   critic.score(data);
-  EXPECT_GT(costs.sum(), 0.0);
+  EXPECT_GT(xt::sum(costs, immediate)(), 0.0);
   EXPECT_NEAR(costs(0), 3.9947, 1e-2);  // atan2(4,-1) [1.81] * 2.2 weight
 
   // Set mode to no directional preferences + reset costs
   critic.setMode(1);
-  costs.setZero();
+  costs = xt::zeros<float>({1000});
 
   // provide state pose and path close but outside of tol. with more than PI/2 angular diff.
   path.x(6) = 1.0;  // angle between path point and pose < max_angle_to_furthest_
   path.y(6) = 0.0;
   critic.score(data);
-  EXPECT_NEAR(costs.sum(), 0.0, 1e-6);
+  EXPECT_NEAR(xt::sum(costs, immediate)(), 0.0, 1e-6);
 
   // provide state pose and path close but outside of tol. with more than PI/2 angular diff.
   path.x(6) = -1.0;  // angle between path pt and pose < max_angle_to_furthest_ IF non-directional
   path.y(6) = 0.0;
   critic.score(data);
-  EXPECT_NEAR(costs.sum(), 0.0, 1e-6);
+  EXPECT_NEAR(xt::sum(costs, immediate)(), 0.0, 1e-6);
 
   // provide state pose and path close but outside of tol. with more than PI/2 angular diff.
   path.x(6) = -1.0;  // angle between path point and pose < max_angle_to_furthest_
   path.y(6) = 4.0;
   critic.score(data);
-  EXPECT_GT(costs.sum(), 0.0);
+  EXPECT_GT(xt::sum(costs, immediate)(), 0.0);
   // should use reverse orientation as the closer angle in no dir preference mode
   EXPECT_NEAR(costs(0), 2.9167, 1e-2);
 
   // Set mode to consider path directionality + reset costs
   critic.setMode(2);
-  costs.setZero();
+  costs = xt::zeros<float>({1000});
 
   // provide state pose and path close but outside of tol. with more than PI/2 angular diff.
   path.x(6) = 1.0;  // angle between path point and pose < max_angle_to_furthest_
   path.y(6) = 0.0;
   critic.score(data);
-  EXPECT_NEAR(costs.sum(), 0.0, 1e-6);
+  EXPECT_NEAR(xt::sum(costs, immediate)(), 0.0, 1e-6);
 
   // provide state pose and path close but outside of tol. with more than PI/2 angular diff.
   path.x(6) = -1.0;  // angle between path pt and pose < max_angle_to_furthest_ IF non-directional
   path.y(6) = 0.0;
   critic.score(data);
-  EXPECT_NEAR(costs.sum(), 0.0, 1e-6);
+  EXPECT_NEAR(xt::sum(costs, immediate)(), 0.0, 1e-6);
 
   // provide state pose and path close but outside of tol. with more than PI/2 angular diff.
   path.x(6) = -1.0;  // angle between path point and pose < max_angle_to_furthest_
   path.y(6) = 4.0;
   critic.score(data);
-  EXPECT_GT(costs.sum(), 0.0);
+  EXPECT_GT(xt::sum(costs, immediate)(), 0.0);
   // should use reverse orientation as the closer angle in no dir preference mode
   EXPECT_NEAR(costs(0), 2.9167, 1e-2);
 
@@ -456,8 +458,7 @@ TEST(CriticTests, PreferForwardCritic)
   generated_trajectories.reset(1000, 30);
   models::Path path;
   geometry_msgs::msg::Pose goal;
-  path.reset(10);
-  Eigen::ArrayXf costs = Eigen::ArrayXf::Zero(1000);
+  xt::xtensor<float, 1> costs = xt::zeros<float>({1000});
   float model_dt = 0.1;
   CriticData data =
   {state, generated_trajectories, path, goal, costs, model_dt,
@@ -491,7 +492,7 @@ TEST(CriticTests, PreferForwardCritic)
   // provide state pose and path close to trigger behavior but with all reverse motion
   state.vx.setConstant(-1.0f);
   critic.score(data);
-  EXPECT_GT(costs.sum(), 0.0f);
+  EXPECT_GT(xt::sum(costs, immediate)(), 0.0f);
   EXPECT_NEAR(costs(0), 15.0f, 1e-3f);  // 1.0 * 0.1 model_dt * 5.0 weight * 30 length
 }
 
@@ -513,8 +514,7 @@ TEST(CriticTests, TwirlingCritic)
   generated_trajectories.reset(1000, 30);
   models::Path path;
   geometry_msgs::msg::Pose goal;
-  path.reset(10);
-  Eigen::ArrayXf costs = Eigen::ArrayXf::Zero(1000);
+  xt::xtensor<float, 1> costs = xt::zeros<float>({1000});
   float model_dt = 0.1;
   CriticData data =
   {state, generated_trajectories, path, goal, costs, model_dt,
@@ -578,8 +578,7 @@ TEST(CriticTests, PathFollowCritic)
   generated_trajectories.reset(1000, 30);
   models::Path path;
   geometry_msgs::msg::Pose goal;
-  path.reset(6);
-  Eigen::ArrayXf costs = Eigen::ArrayXf::Zero(1000);
+  xt::xtensor<float, 1> costs = xt::zeros<float>({1000});
   float model_dt = 0.1;
   CriticData data =
   {state, generated_trajectories, path, goal, costs, model_dt,
@@ -630,8 +629,7 @@ TEST(CriticTests, PathAlignCritic)
   generated_trajectories.reset(1000, 30);
   models::Path path;
   geometry_msgs::msg::Pose goal;
-  path.reset(10);
-  Eigen::ArrayXf costs = Eigen::ArrayXf::Zero(1000);
+  xt::xtensor<float, 1> costs = xt::zeros<float>({1000});
   float model_dt = 0.1;
   CriticData data =
   {state, generated_trajectories, path, goal, costs, model_dt,
@@ -702,7 +700,7 @@ TEST(CriticTests, PathAlignCritic)
   generated_trajectories.x.setConstant(0.66f);
   critic.score(data);
   // 0.66 * 1000 * 10 weight * 6 num pts eval / 6 normalization term
-  EXPECT_NEAR(costs.sum(), 6600.0, 1e-2);
+  EXPECT_NEAR(xt::sum(costs, immediate)(), 6600.0, 1e-2);
 
   // provide state pose and path far enough to enable, with data to pass condition
   // but path is blocked in collision
@@ -718,6 +716,7 @@ TEST(CriticTests, PathAlignCritic)
   costs.setZero();
   path.x.setConstant(1.5f);
   path.y.setConstant(1.5f);
+  goal.position.x = 1.5;
   goal.position.x = 1.5;
   critic.score(data);
   EXPECT_NEAR(costs.sum(), 0.0, 1e-6);
@@ -770,6 +769,56 @@ TEST(CriticTests, VelocityDeadbandCritic)
   state.vx.setConstant(0.01f);
   state.vy.setConstant(0.02f);
   state.wz.setConstant(0.021f);
+  critic.score(data);
+  // 35.0 weight * 0.1 model_dt * (0.07 + 0.06 + 0.059) * 30 timesteps = 56.7
+  EXPECT_NEAR(costs(1), 19.845, 0.01);
+}
+
+TEST(CriticTests, VelocityDeadbandCritic)
+{
+  // Standard preamble
+  auto node = std::make_shared<rclcpp_lifecycle::LifecycleNode>("my_node");
+  auto costmap_ros = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
+    "dummy_costmap", "", "dummy_costmap", true);
+  ParametersHandler param_handler(node);
+  auto getParam = param_handler.getParamGetter("critic");
+  std::vector<double> deadband_velocities_;
+  getParam(deadband_velocities_, "deadband_velocities", std::vector<double>{0.08, 0.08, 0.08});
+  rclcpp_lifecycle::State lstate;
+  costmap_ros->on_configure(lstate);
+
+  models::State state;
+  models::ControlSequence control_sequence;
+  models::Trajectories generated_trajectories;
+  models::Path path;
+  geometry_msgs::msg::Pose goal;
+  xt::xtensor<float, 1> costs = xt::zeros<float>({1000});
+  float model_dt = 0.1;
+  CriticData data =
+  {state, generated_trajectories, path, goal, costs, model_dt,
+    false, nullptr, nullptr, std::nullopt, std::nullopt};
+  data.motion_model = std::make_shared<OmniMotionModel>();
+
+  // Initialization testing
+
+  // Make sure initializes correctly and that defaults are reasonable
+  VelocityDeadbandCritic critic;
+  critic.on_configure(node, "mppi", "critic", costmap_ros, &param_handler);
+  EXPECT_EQ(critic.getName(), "critic");
+
+  // Scoring testing
+
+  // provide velocities out of deadband bounds, should not have any costs
+  state.vx = 0.80 * xt::ones<float>({1000, 30});
+  state.vy = 0.60 * xt::ones<float>({1000, 30});
+  state.wz = 0.80 * xt::ones<float>({1000, 30});
+  critic.score(data);
+  EXPECT_NEAR(xt::sum(costs, immediate)(), 0, 1e-6);
+
+  // Test cost value
+  state.vx = 0.01 * xt::ones<float>({1000, 30});
+  state.vy = 0.02 * xt::ones<float>({1000, 30});
+  state.wz = 0.021 * xt::ones<float>({1000, 30});
   critic.score(data);
   // 35.0 weight * 0.1 model_dt * (0.07 + 0.06 + 0.059) * 30 timesteps = 56.7
   EXPECT_NEAR(costs(1), 19.845, 0.01);

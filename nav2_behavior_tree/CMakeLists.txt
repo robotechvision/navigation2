@@ -14,6 +14,11 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(nav2_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(behaviortree_cpp REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(tf2 REQUIRED)
@@ -21,7 +26,30 @@ find_package(tf2_ros REQUIRED)
 
 nav2_package()
 
+add_compile_options(-Wno-shadow) # Delete after https://github.com/BehaviorTree/BehaviorTree.CPP/issues/811 is released
+
+include_directories(
+  include
+)
+
 set(library_name ${PROJECT_NAME})
+
+set(dependencies
+  rclcpp
+  rclcpp_action
+  rclcpp_lifecycle
+  geometry_msgs
+  sensor_msgs
+  nav2_msgs
+  nav_msgs
+  behaviortree_cpp
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  std_msgs
+  std_srvs
+  nav2_util
+)
 
 add_library(${library_name} SHARED
   src/behavior_tree_engine.cpp
@@ -53,6 +81,9 @@ list(APPEND plugin_libs nav2_compute_path_to_pose_action_bt_node)
 
 add_library(nav2_compute_path_through_poses_action_bt_node SHARED plugins/action/compute_path_through_poses_action.cpp)
 list(APPEND plugin_libs nav2_compute_path_through_poses_action_bt_node)
+
+add_library(nav2_concatenate_paths_action_bt_node SHARED plugins/action/concatenate_paths_action.cpp)
+list(APPEND plugin_libs nav2_concatenate_paths_action_bt_node)
 
 add_library(nav2_controller_cancel_bt_node SHARED plugins/action/controller_cancel_node.cpp)
 list(APPEND plugin_libs nav2_controller_cancel_bt_node)
@@ -135,6 +166,9 @@ list(APPEND plugin_libs nav2_is_battery_low_condition_bt_node)
 add_library(nav2_are_error_codes_active_condition_bt_node SHARED plugins/condition/are_error_codes_present_condition.cpp)
 list(APPEND plugin_libs nav2_are_error_codes_active_condition_bt_node)
 
+add_library(nav2_are_poses_near_condition_bt_node SHARED plugins/condition/are_poses_near_condition.cpp)
+list(APPEND plugin_libs nav2_are_poses_near_condition_bt_node)
+
 add_library(nav2_would_a_controller_recovery_help_condition_bt_node SHARED plugins/condition/would_a_controller_recovery_help_condition.cpp)
 list(APPEND plugin_libs nav2_would_a_controller_recovery_help_condition_bt_node)
 
@@ -180,6 +214,12 @@ list(APPEND plugin_libs nav2_navigate_through_poses_action_bt_node)
 add_library(nav2_remove_passed_goals_action_bt_node SHARED plugins/action/remove_passed_goals_action.cpp)
 list(APPEND plugin_libs nav2_remove_passed_goals_action_bt_node)
 
+add_library(nav2_get_current_pose_action_bt_node SHARED plugins/action/get_current_pose_action.cpp)
+list(APPEND plugin_libs nav2_get_current_pose_action_bt_node)
+
+add_library(nav2_get_pose_from_path_action_bt_node SHARED plugins/action/get_pose_from_path_action.cpp)
+list(APPEND plugin_libs nav2_get_pose_from_path_action_bt_node)
+
 add_library(nav2_pipeline_sequence_bt_node SHARED plugins/control/pipeline_sequence.cpp)
 list(APPEND plugin_libs nav2_pipeline_sequence_bt_node)
 
@@ -201,20 +241,23 @@ list(APPEND plugin_libs nav2_smoother_selector_bt_node)
 add_library(nav2_goal_checker_selector_bt_node SHARED plugins/action/goal_checker_selector_node.cpp)
 list(APPEND plugin_libs nav2_goal_checker_selector_bt_node)
 
+add_library(nav2_progress_checker_selector_bt_node SHARED plugins/action/progress_checker_selector_node.cpp)
+list(APPEND plugin_libs nav2_progress_checker_selector_bt_node)
+
 add_library(nav2_goal_updated_controller_bt_node SHARED plugins/decorator/goal_updated_controller.cpp)
 list(APPEND plugin_libs nav2_goal_updated_controller_bt_node)
 
 add_library(nav2_compute_path_to_pose_service_bt_node SHARED plugins/action/compute_path_to_pose_service.cpp)
 list(APPEND plugin_libs nav2_compute_path_to_pose_service_bt_node)
 
-#add_library(nav2_compute_and_track_route_cancel_bt_node SHARED plugins/action/compute_and_track_route_cancel_node.cpp)
-#list(APPEND plugin_libs nav2_compute_and_track_route_cancel_bt_node)
-#
-#add_library(nav2_compute_and_track_route_bt_node SHARED plugins/action/compute_and_track_route_action.cpp)
-#list(APPEND plugin_libs nav2_compute_and_track_route_bt_node)
-#
-#add_library(nav2_compute_route_bt_node SHARED plugins/action/compute_route_action.cpp)
-#list(APPEND plugin_libs nav2_compute_route_bt_node)
+add_library(nav2_compute_and_track_route_cancel_bt_node SHARED plugins/action/compute_and_track_route_cancel_node.cpp)
+list(APPEND plugin_libs nav2_compute_and_track_route_cancel_bt_node)
+
+add_library(nav2_compute_and_track_route_bt_node SHARED plugins/action/compute_and_track_route_action.cpp)
+list(APPEND plugin_libs nav2_compute_and_track_route_bt_node)
+
+add_library(nav2_compute_route_bt_node SHARED plugins/action/compute_route_action.cpp)
+list(APPEND plugin_libs nav2_compute_route_bt_node)
 
 foreach(bt_plugin ${plugin_libs})
   target_include_directories(${bt_plugin}
@@ -253,16 +296,12 @@ install(TARGETS ${library_name} ${plugin_libs}
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/gen)
 configure_file(plugins_list.hpp.in ${GENERATED_DIR}/plugins_list.hpp)
 
-#add_executable(generate_nav2_tree_nodes_xml src/generate_nav2_tree_nodes_xml.cpp)
-#target_link_libraries(generate_nav2_tree_nodes_xml PUBLIC
-#  ${behaviortree_cpp_v3_TARGETS}
-#  ${nav2_util_TARGETS}
-#)
-## allow generate_nav2_tree_nodes_xml to find plugins_list.hpp
-#target_include_directories(generate_nav2_tree_nodes_xml PRIVATE ${GENERATED_DIR}
-#  ${behaviortree_cpp_v3_INCLUDE_DIRS}
-#  ${nav2_util_INCLUDE_DIRS})
-#install(TARGETS generate_nav2_tree_nodes_xml DESTINATION lib/${PROJECT_NAME})
+add_executable(generate_nav2_tree_nodes_xml src/generate_nav2_tree_nodes_xml.cpp)
+ament_target_dependencies(generate_nav2_tree_nodes_xml ${dependencies})
+# allow generate_nav2_tree_nodes_xml to find plugins_list.hpp
+target_include_directories(generate_nav2_tree_nodes_xml PRIVATE ${GENERATED_DIR})
+install(TARGETS generate_nav2_tree_nodes_xml DESTINATION lib/${PROJECT_NAME})
+
 
 install(DIRECTORY include/
   DESTINATION include/  # ${PROJECT_NAME}
@@ -272,8 +311,16 @@ install(DIRECTORY test/utils/
   DESTINATION include/${PROJECT_NAME}/nav2_behavior_tree/test/utils
 )
 
+install(DIRECTORY test/utils/
+        DESTINATION include/${PROJECT_NAME}/utils/
+)
+
+install(DIRECTORY test/utils/
+  DESTINATION include/${PROJECT_NAME}/nav2_behavior_tree/test/utils
+)
+
 install(FILES nav2_tree_nodes.xml DESTINATION share/${PROJECT_NAME})
-install(FILES ${GENERATED_DIR}/plugins_list.hpp DESTINATION include/${PROJECT_NAME}/${PROJECT_NAME})
+install(FILES ${GENERATED_DIR}/plugins_list.hpp DESTINATION include/${PROJECT_NAME})
 
 #if(BUILD_TESTING)
 #  find_package(ament_lint_auto REQUIRED)
