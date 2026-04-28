@@ -19,12 +19,11 @@ namespace mppi::critics
 
 void GoalAngleCritic::initialize()
 {
-  auto getParentParam = parameters_handler_->getParamGetter(parent_name_);
-  getParentParam(enforce_path_inversion_, "enforce_path_inversion", false);
-
   auto getParam = parameters_handler_->getParamGetter(name_);
+
   getParam(power_, "cost_power", 1);
   getParam(weight_, "cost_weight", 3.0f);
+
   getParam(threshold_to_consider_, "threshold_to_consider", 0.5f);
 
   RCLCPP_INFO(
@@ -42,7 +41,8 @@ void GoalAngleCritic::score(CriticData & data)
     return;
   }
 
-  double goal_yaw = tf2::getYaw(goal.orientation);
+  const auto goal_idx = data.path.x.shape(0) - 1;
+  const float goal_yaw = data.path.yaws(goal_idx);
 
   if (power_ > 1u) {
     data.costs += xt::pow(

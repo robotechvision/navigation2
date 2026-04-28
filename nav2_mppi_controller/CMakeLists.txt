@@ -13,22 +13,7 @@ set(XTENSOR_USE_XSIMD 1)
 
 find_package(ament_cmake REQUIRED)
 find_package(xsimd REQUIRED)
-find_package(angles REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(nav2_common REQUIRED)
-find_package(nav2_core REQUIRED)
-find_package(nav2_costmap_2d REQUIRED)
-find_package(nav2_util REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(pluginlib REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(rclcpp_lifecycle REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(tf2 REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(visualization_msgs REQUIRED)
-find_package(Eigen3 REQUIRED)
+find_package(xtensor REQUIRED)
 
 include_directories(
   include
@@ -49,6 +34,10 @@ set(dependencies_pkgs
   tf2_eigen
   tf2_ros
 )
+
+foreach(pkg IN LISTS dependencies_pkgs)
+  find_package(${pkg} REQUIRED)
+endforeach()
 
 nav2_package()
 
@@ -80,45 +69,22 @@ add_compile_options(-O3 -finline-limit=10000000 -ffp-contract=fast -ffast-math -
 
 add_library(mppi_controller SHARED
   src/controller.cpp
-  src/critic_manager.cpp
-  src/noise_generator.cpp
   src/optimizer.cpp
-  src/parameters_handler.cpp
-  src/path_handler.cpp
+  src/critic_manager.cpp
   src/trajectory_visualizer.cpp
-)
-target_compile_options(mppi_controller PUBLIC -O3)
-target_include_directories(mppi_controller
-  PUBLIC
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-    "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
-target_link_libraries(mppi_controller PUBLIC
-  angles::angles
-  ${geometry_msgs_TARGETS}
-  nav2_core::nav2_core
-  nav2_costmap_2d::layers
-  nav2_costmap_2d::nav2_costmap_2d_core
-  ${nav_msgs_TARGETS}
-  pluginlib::pluginlib
-  rclcpp::rclcpp
-  rclcpp_lifecycle::rclcpp_lifecycle
-  ${std_msgs_TARGETS}
-  tf2::tf2
-  tf2_geometry_msgs::tf2_geometry_msgs
-  tf2_ros::tf2_ros
-  ${visualization_msgs_TARGETS}
+  src/path_handler.cpp
+  src/parameters_handler.cpp
+  src/noise_generator.cpp
 )
 
 add_library(mppi_critics SHARED
-  src/critics/constraint_critic.cpp
-  src/critics/cost_critic.cpp
+  src/critics/obstacles_critic.cpp
   src/critics/cost_critic.cpp
   src/critics/goal_critic.cpp
   src/critics/goal_angle_critic.cpp
-  src/critics/obstacles_critic.cpp
   src/critics/path_align_critic.cpp
-  src/critics/path_angle_critic.cpp
   src/critics/path_follow_critic.cpp
+  src/critics/path_angle_critic.cpp
   src/critics/prefer_forward_critic.cpp
   src/critics/twirling_critic.cpp
   src/critics/constraint_critic.cpp
@@ -135,48 +101,27 @@ foreach(lib IN LISTS libraries)
 endforeach()
 
 install(TARGETS mppi_controller mppi_critics
-  EXPORT nav2_mppi_controller
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
 
 install(DIRECTORY include/
-  DESTINATION include/${PROJECT_NAME}
+  DESTINATION include/
 )
 
-#if(BUILD_TESTING)
-#  find_package(ament_lint_auto REQUIRED)
-#  find_package(ament_cmake_gtest REQUIRED)
-#  set(ament_cmake_copyright_FOUND TRUE)
-#  ament_lint_auto_find_test_dependencies()
-#
-#  ament_find_gtest()
-#
-#  add_subdirectory(test)
-#  add_subdirectory(benchmark)
-#endif()
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  find_package(ament_cmake_gtest REQUIRED)
+  set(ament_cmake_copyright_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+  add_subdirectory(test)
+  # add_subdirectory(benchmark)
+endif()
 
 ament_export_libraries(${libraries})
-ament_export_dependencies(
-  angles
-  geometry_msgs
-  nav2_core
-  nav2_costmap_2d
-  nav_msgs
-  pluginlib
-  rclcpp
-  rclcpp_lifecycle
-  std_msgs
-  tf2
-  tf2_geometry_msgs
-  tf2_ros
-  visualization_msgs
-  Eigen3
-)
-ament_export_include_directories(include/${PROJECT_NAME})
-ament_export_targets(nav2_mppi_controller)
-
+ament_export_dependencies(${dependencies_pkgs})
+ament_export_include_directories(include)
 pluginlib_export_plugin_description_file(nav2_core mppic.xml)
 pluginlib_export_plugin_description_file(nav2_mppi_controller critics.xml)
 

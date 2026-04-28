@@ -70,8 +70,6 @@ public:
     reset();
   }
 
-  virtual ~MapBasedQueue() {}
-
   /**
    * @brief Default virtual Destructor
    */

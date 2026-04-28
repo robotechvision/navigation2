@@ -15,8 +15,6 @@
 #ifndef NAV2_MPPI_CONTROLLER__CRITIC_DATA_HPP_
 #define NAV2_MPPI_CONTROLLER__CRITIC_DATA_HPP_
 
-#include <Eigen/Dense>
-
 #include <memory>
 #include <vector>
 
@@ -50,7 +48,7 @@ struct CriticData
   const models::Path & path;
   const geometry_msgs::msg::Pose & goal;
 
-  Eigen::ArrayXf & costs;
+  xt::xtensor<float, 1> & costs;
   float & model_dt;
 
   bool fail_flag;

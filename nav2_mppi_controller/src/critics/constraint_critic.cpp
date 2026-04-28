@@ -40,6 +40,8 @@ void ConstraintCritic::initialize()
 
 void ConstraintCritic::score(CriticData & data)
 {
+  using xt::evaluation_strategy::immediate;
+
   if (!enabled_) {
     return;
   }

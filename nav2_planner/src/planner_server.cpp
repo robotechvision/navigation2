@@ -759,7 +759,11 @@ void PlannerServer::computePlanService(
       throw nav2_core::PlannerTFError("Unable to transform poses to global frame");
     }
 
-    response->path = getPlan(start_pose, goal_pose, request->planner_id);
+    auto cancel_checker = [this]() {
+      return false;
+    };
+
+    response->path = getPlan(start_pose, goal_pose, request->planner_id, cancel_checker);
     if (!validatePath<nav2_rtv_msgs::srv::ComputePathToPose>(goal_pose, response->path, request->planner_id)) {
       throw nav2_core::NoValidPathCouldBeFound(request->planner_id + " generated a empty path");
     }

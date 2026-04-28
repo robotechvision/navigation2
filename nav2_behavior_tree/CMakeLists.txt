@@ -3,7 +3,6 @@ project(nav2_behavior_tree CXX)
 
 find_package(ament_cmake REQUIRED)
 find_package(action_msgs REQUIRED)
-find_package(behaviortree_cpp_v3 REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav2_common REQUIRED)
 find_package(nav2_msgs REQUIRED)
@@ -41,6 +40,7 @@ set(dependencies
   geometry_msgs
   sensor_msgs
   nav2_msgs
+  nav2_rtv_msgs
   nav_msgs
   behaviortree_cpp
   tf2
@@ -54,26 +54,9 @@ set(dependencies
 add_library(${library_name} SHARED
   src/behavior_tree_engine.cpp
 )
-target_include_directories(${library_name}
-  PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
-  ${behaviortree_cpp_v3_INCLUDE_DIRS}
-  ${nav2_util_INCLUDE_DIRS})
-target_link_libraries(${library_name} PUBLIC
-  ${action_msgs_TARGETS}
-  ${behaviortree_cpp_v3_TARGETS}
-  ${geometry_msgs_TARGETS}
-  ${nav_msgs_TARGETS}
-  ${nav2_msgs_TARGETS}
-  ${nav2_rtv_msgs_TARGETS}
-  ${nav2_util_TARGETS}
-  rclcpp::rclcpp
-  rclcpp_action::rclcpp_action
-  rclcpp_lifecycle::rclcpp_lifecycle
-  ${sensor_msgs_TARGETS}
-  tf2::tf2
-  tf2_ros::tf2_ros
+
+ament_target_dependencies(${library_name}
+        ${dependencies}
 )
 
 add_library(nav2_compute_path_to_pose_action_bt_node SHARED plugins/action/compute_path_to_pose_action.cpp)
@@ -260,28 +243,7 @@ add_library(nav2_compute_route_bt_node SHARED plugins/action/compute_route_actio
 list(APPEND plugin_libs nav2_compute_route_bt_node)
 
 foreach(bt_plugin ${plugin_libs})
-  target_include_directories(${bt_plugin}
-    PRIVATE
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-    "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
-    ${behaviortree_cpp_v3_INCLUDE_DIRS}
-    ${nav2_util_INCLUDE_DIRS})
-  target_link_libraries(${bt_plugin} PUBLIC
-    ${behaviortree_cpp_v3_TARGETS}
-    ${geometry_msgs_TARGETS}
-    ${nav_msgs_TARGETS}
-    ${nav2_msgs_TARGETS}
-    ${nav2_util_TARGETS}
-    ${nav2_rtv_msgs_TARGETS}
-    rclcpp::rclcpp
-    rclcpp_action::rclcpp_action
-    rclcpp_lifecycle::rclcpp_lifecycle
-    ${sensor_msgs_TARGETS}
-    tf2::tf2
-    tf2_ros::tf2_ros
-    ${std_msgs_TARGETS}
-    ${std_srvs_TARGETS}
-  )
+  ament_target_dependencies(${bt_plugin} ${dependencies})
   target_compile_definitions(${bt_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
 
@@ -304,11 +266,7 @@ install(TARGETS generate_nav2_tree_nodes_xml DESTINATION lib/${PROJECT_NAME})
 
 
 install(DIRECTORY include/
-  DESTINATION include/  # ${PROJECT_NAME}
-)
-
-install(DIRECTORY test/utils/
-  DESTINATION include/${PROJECT_NAME}/nav2_behavior_tree/test/utils
+        DESTINATION include/
 )
 
 install(DIRECTORY test/utils/
@@ -316,49 +274,28 @@ install(DIRECTORY test/utils/
 )
 
 install(DIRECTORY test/utils/
-  DESTINATION include/${PROJECT_NAME}/nav2_behavior_tree/test/utils
+        DESTINATION include/${PROJECT_NAME}/nav2_behavior_tree/test/utils
 )
 
 install(FILES nav2_tree_nodes.xml DESTINATION share/${PROJECT_NAME})
 install(FILES ${GENERATED_DIR}/plugins_list.hpp DESTINATION include/${PROJECT_NAME})
 
-#if(BUILD_TESTING)
-#  find_package(ament_lint_auto REQUIRED)
-#  ament_lint_auto_find_test_dependencies()
-#  find_package(ament_cmake_gtest REQUIRED)
-#
-#  ament_find_gtest()
-#
-#  add_subdirectory(test)
-#endif()
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+  find_package(ament_cmake_gtest REQUIRED)
+  add_subdirectory(test)
+endif()
 
-install(DIRECTORY include/
-  DESTINATION include/
-)
-install(DIRECTORY include/
-  DESTINATION include/${PROJECT_NAME}
+ament_export_include_directories(
+        include
 )
 
-ament_export_libraries(${library_name})
-
-ament_export_dependencies(
-  action_msgs
-  behaviortree_cpp_v3
-  geometry_msgs
-  nav2_common
-  nav2_msgs
-  nav2_rtv_msgs
-  nav2_util
-  nav_msgs
-  rclcpp
-  rclcpp_action
-  rclcpp_lifecycle
-  sensor_msgs
-  std_msgs
-  std_srvs
-  tf2
-  tf2_ros
+ament_export_libraries(
+        ${library_name}
+        ${plugin_libs}
 )
-ament_export_targets(${library_name})
+
+ament_export_dependencies(${dependencies})
 
 ament_package()

@@ -287,8 +287,7 @@ TEST(AStarTest, test_a_star_analytic_expansion)
   nav2_smac_planner::AStarAlgorithm<nav2_smac_planner::NodeHybrid> a_star_2(
     nav2_smac_planner::MotionModel::DUBIN, info);
 
-  nav2_costmap_2d::Costmap2D * costmapB =
-  new nav2_costmap_2d::Costmap2D(100, 100, 0.1, 0.0, 0.0, 150);
+  auto costmapB = new nav2_costmap_2d::Costmap2D(100, 100, 0.1, 0.0, 0.0, 150);
   // island in the middle of lethal cost to cross
   for (unsigned int i = 40; i <= 60; ++i) {
     for (unsigned int j = 0; j < 100; ++j) {
@@ -296,8 +295,11 @@ TEST(AStarTest, test_a_star_analytic_expansion)
     }
   }
 
-  a_star_2.initialize(false, max_iterations, it_on_approach, max_planning_time, 401, size_theta);
-  checker = std::make_unique<nav2_smac_planner::GridCollisionChecker>(costmapB, size_theta);
+  *costmap = *costmapB;
+
+  a_star_2.initialize(false, max_iterations, it_on_approach, terminal_checking_interval,
+    max_planning_time, 401, size_theta);
+  checker = std::make_unique<nav2_smac_planner::GridCollisionChecker>(costmap_ros, size_theta, lnode);
   checker->setFootprint(nav2_costmap_2d::Footprint(), true, 0.0);
   a_star_2.setCollisionChecker(checker.get());
 
@@ -315,7 +317,7 @@ TEST(AStarTest, test_a_star_analytic_expansion)
   a_star_2.setStart(20, 50, 0u);
   a_star_2.setGoal(30u, 50, 0u);
   num_it = 0;
-  EXPECT_TRUE(a_star_2.createPath(path, num_it, tolerance));
+  EXPECT_TRUE(a_star_2.createPath(path, num_it, tolerance, dummy_cancel_checker, expansions.get()));
   EXPECT_EQ(num_it, 1);
 
   // max subelevation constraint broken for start node (wait for a safer place to find analytic path from)
@@ -323,7 +325,7 @@ TEST(AStarTest, test_a_star_analytic_expansion)
   a_star_2.setStart(20, 50, 0u);
   a_star_2.setGoal(80u, 50, 0u);
   num_it = 0;
-  EXPECT_TRUE(a_star_2.createPath(path, num_it, tolerance));
+  EXPECT_TRUE(a_star_2.createPath(path, num_it, tolerance, dummy_cancel_checker, expansions.get()));
   EXPECT_GT(num_it, 1);
 
   // max angle range constraint broken for start node (wait for a less complicated maneuver)
@@ -331,7 +333,7 @@ TEST(AStarTest, test_a_star_analytic_expansion)
   a_star_2.setStart(20, 50, 0u);
   a_star_2.setGoal(30u, 50, 36u);
   num_it = 0;
-  EXPECT_TRUE(a_star_2.createPath(path, num_it, tolerance));
+  EXPECT_TRUE(a_star_2.createPath(path, num_it, tolerance, dummy_cancel_checker, expansions.get()));
   EXPECT_GT(num_it, 1);
 
   delete costmapB;

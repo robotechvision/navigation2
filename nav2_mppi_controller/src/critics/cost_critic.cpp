@@ -22,9 +22,6 @@ namespace mppi::critics
 
 void CostCritic::initialize()
 {
-  auto getParentParam = parameters_handler_->getParamGetter(parent_name_);
-  getParentParam(enforce_path_inversion_, "enforce_path_inversion", false);
-
   auto getParam = parameters_handler_->getParamGetter(name_);
   getParam(consider_footprint_, "consider_footprint", false);
   getParam(power_, "cost_power", 1);
@@ -92,17 +89,8 @@ float CostCritic::findCircumscribedCost(
     return circumscribed_cost_;
   }
 
-  bool inflation_layer_found = false;
-  for (auto layer = costmap->getLayeredCostmap()->getPlugins()->begin();
-       layer != costmap->getLayeredCostmap()->getPlugins()->end();
-       ++layer) {
-    auto inflation_layer = std::dynamic_pointer_cast<nav2_costmap_2d::InflationLayer>(*layer);
-    if (!inflation_layer) {
-      continue;
-    }
-    inflation_layer_found = true;
-
-    // check if the costmap has an inflation layerconst auto inflation_layer = nav2_costmap_2d::InflationLayer::getInflationLayer(
+  // check if the costmap has an inflation layer
+  const auto inflation_layer = nav2_costmap_2d::InflationLayer::getInflationLayer(
     costmap,
     inflation_layer_name_);
   if (inflation_layer != nullptr) {
@@ -121,8 +109,7 @@ float CostCritic::findCircumscribedCost(
       return result;
     }
     result = inflation_layer->computeCost(circum_radius / resolution);
-  }
-  if (!inflation_layer_found) {
+  } else {
     RCLCPP_WARN(
       logger_,
       "No inflation layer found in costmap configuration. "
@@ -145,8 +132,6 @@ void CostCritic::score(CriticData & data)
   if (!enabled_) {
     return;
   }
-
-  geometry_msgs::msg::Pose goal = utils::getCriticGoal(data, enforce_path_inversion_);
 
   // Setup cost information for various parts of the critic
   is_tracking_unknown_ = costmap_ros_->getLayeredCostmap()->isTrackingUnknown();

@@ -44,7 +44,6 @@ static void tred2(double V[n][n], double d[n], double e[n])
 
   int i, j, k;
   double f, g, hh;
-  double scale;
   for (j = 0; j < n; j++) {
     d[j] = V[n - 1][j];
   }
@@ -54,8 +53,8 @@ static void tred2(double V[n][n], double d[n], double e[n])
   for (i = n - 1; i > 0; i--) {
     // Scale to avoid under/overflow.
 
-    scale = 0.0;
-    h = 0.0;
+    double scale = 0.0;
+    double h = 0.0;
     for (k = 0; k < i; k++) {
       scale = scale + fabs(d[k]);
     }

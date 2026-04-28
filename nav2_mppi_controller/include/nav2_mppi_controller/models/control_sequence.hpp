@@ -19,7 +19,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
-#include <Eigen/Dense>
+#include <xtensor/xtensor.hpp>
 #pragma GCC diagnostic pop
 
 namespace mppi::models
@@ -40,15 +40,15 @@ struct Control
  */
 struct ControlSequence
 {
-  Eigen::ArrayXf vx;
-  Eigen::ArrayXf vy;
-  Eigen::ArrayXf wz;
+  xt::xtensor<float, 1> vx;
+  xt::xtensor<float, 1> vy;
+  xt::xtensor<float, 1> wz;
 
   void reset(unsigned int time_steps)
   {
-    vx.setZero(time_steps);
-    vy.setZero(time_steps);
-    wz.setZero(time_steps);
+    vx = xt::zeros<float>({time_steps});
+    vy = xt::zeros<float>({time_steps});
+    wz = xt::zeros<float>({time_steps});
   }
 };
 
